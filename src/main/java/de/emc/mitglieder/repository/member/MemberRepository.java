@@ -210,4 +210,19 @@ public class MemberRepository {
                 mitgliedsnummer
         );
     }
+
+    public void updateStammdaten(
+            String mitgliedsnummer,
+            String vorname,
+            String nachname,
+            String ort
+    ) {
+        String sql = """
+            UPDATE tblMitglieder
+            SET Vorname = ?, Nachname = ?, Ort = ?
+            WHERE Mitgliedsnummer = ?
+            """;
+
+        jdbcTemplate.update(sql, vorname, nachname, ort, mitgliedsnummer);
+    }
 }

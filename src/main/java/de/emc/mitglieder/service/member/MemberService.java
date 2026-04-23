@@ -1,9 +1,6 @@
 package de.emc.mitglieder.service.member;
 
-import de.emc.mitglieder.dto.member.MemberDetailDto;
-import de.emc.mitglieder.dto.member.MemberListItemDto;
-import de.emc.mitglieder.dto.member.MemberListResponse;
-import de.emc.mitglieder.dto.member.PaginationDto;
+import de.emc.mitglieder.dto.member.*;
 import de.emc.mitglieder.repository.member.MemberRepository;
 import org.springframework.stereotype.Service;
 
@@ -53,5 +50,14 @@ public class MemberService {
 
     public MemberDetailDto getMemberById(String mitgliedsnummer) {
         return memberRepository.findMemberById(mitgliedsnummer);
+    }
+
+    public void updateStammdaten(String mitgliedsnummer, UpdateStammdatenRequest request) {
+        memberRepository.updateStammdaten(
+                mitgliedsnummer,
+                request.vorname(),
+                request.nachname(),
+                request.ort()
+        );
     }
 }

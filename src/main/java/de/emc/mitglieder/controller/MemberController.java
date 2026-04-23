@@ -2,11 +2,9 @@ package de.emc.mitglieder.controller;
 
 import de.emc.mitglieder.dto.member.MemberDetailDto;
 import de.emc.mitglieder.dto.member.MemberListResponse;
+import de.emc.mitglieder.dto.member.UpdateStammdatenRequest;
 import de.emc.mitglieder.service.member.MemberService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class MemberController {
@@ -31,5 +29,13 @@ public class MemberController {
     @GetMapping("/api/members/{mitgliedsnummer}")
     public MemberDetailDto getMemberById(@PathVariable String mitgliedsnummer) {
         return memberService.getMemberById(mitgliedsnummer);
+    }
+
+    @PutMapping("/api/members/{mitgliedsnummer}/stammdaten")
+    public void updateStammdaten(
+            @PathVariable String mitgliedsnummer,
+            @RequestBody UpdateStammdatenRequest request
+    ) {
+        memberService.updateStammdaten(mitgliedsnummer, request);
     }
 }
