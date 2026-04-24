@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.dao.EmptyResultDataAccessException;
 import de.emc.mitglieder.exception.NotFoundException;
 import de.emc.mitglieder.constant.MemberDefaults;
+import de.emc.mitglieder.mapper.MemberMapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -195,48 +196,9 @@ public class MemberRepository {
                 """;
 
         try {
-            return jdbcTemplate.queryForObject(sql, (rs, rowNum) ->
-                            new MemberDetailDto(
-                                    rs.getString("Mitgliedsnummer"),
-
-                                    new StammdatenDto(
-                                            rs.getString("Anrede"),
-                                            rs.getString("AkademischerTitel"),
-                                            rs.getString("Vorname"),
-                                            rs.getString("Nachname"),
-                                            rs.getString("PLZ"),
-                                            rs.getString("Ort"),
-                                            rs.getString("StrasseHausNr"),
-                                            rs.getObject("Geburtsdatum") != null
-                                                    ? rs.getTimestamp("Geburtsdatum").toLocalDateTime().toLocalDate()
-                                                    : null
-                                    ),
-
-                                    new KontaktDto(
-                                            rs.getString("Telefon_privat"),
-                                            rs.getString("Telefon_geschaeftlich"),
-                                            rs.getString("Mobiltelefon"),
-                                            rs.getString("EMail"),
-                                            rs.getString("Adresszusatz"),
-                                            rs.getString("Briefanrede")
-                                    ),
-
-                                    new MitgliedschaftDto(
-                                            rs.getObject("Eintritt") != null
-                                                    ? rs.getTimestamp("Eintritt").toLocalDateTime().toLocalDate()
-                                                    : null,
-                                            rs.getObject("Austritt") != null
-                                                    ? rs.getTimestamp("Austritt").toLocalDateTime().toLocalDate()
-                                                    : null,
-                                            (Integer) rs.getObject("IDMitgliederstatus"),
-                                            rs.getString("Mitgliederstatus"),
-                                            (Integer) rs.getObject("IDStimme"),
-                                            rs.getString("Stimme"),
-                                            rs.getObject("Kammerchor") != null
-                                                    ? rs.getBoolean("Kammerchor")
-                                                    : null
-                                    )
-                            ),
+            return jdbcTemplate.queryForObject(
+                    sql,
+                    (rs, rowNum) -> MemberMapper.mapMemberDetail(rs),
                     mitgliedsnummer
             );
         } catch (EmptyResultDataAccessException ex) {
