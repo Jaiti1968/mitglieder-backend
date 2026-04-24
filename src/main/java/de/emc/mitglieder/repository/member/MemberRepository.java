@@ -151,9 +151,14 @@ public class MemberRepository {
         String sql = """
                 SELECT
                     m.Mitgliedsnummer,
+                    m.Anrede,
+                    m.AkademischerTitel,
                     m.Vorname,
                     m.Nachname,
+                    m.PLZ,
                     m.Ort,
+                    m.StrasseHausNr,
+                    m.Geburtsdatum,
 
                     k.Telefon_privat,
                     k.Telefon_geschaeftlich,
@@ -190,9 +195,16 @@ public class MemberRepository {
                                     rs.getString("Mitgliedsnummer"),
 
                                     new StammdatenDto(
+                                            rs.getString("Anrede"),
+                                            rs.getString("AkademischerTitel"),
                                             rs.getString("Vorname"),
                                             rs.getString("Nachname"),
-                                            rs.getString("Ort")
+                                            rs.getString("PLZ"),
+                                            rs.getString("Ort"),
+                                            rs.getString("StrasseHausNr"),
+                                            rs.getObject("Geburtsdatum") != null
+                                                    ? rs.getTimestamp("Geburtsdatum").toLocalDateTime().toLocalDate()
+                                                    : null
                                     ),
 
                                     new KontaktDto(
@@ -220,17 +232,34 @@ public class MemberRepository {
 
     public void updateStammdaten(
             String mitgliedsnummer,
-            String vorname,
-            String nachname,
-            String ort
+            UpdateStammdatenRequest r
     ) {
         String sql = """
             UPDATE tblMitglieder
-            SET Vorname = ?, Nachname = ?, Ort = ?
+            SET
+                Anrede = ?,
+                AkademischerTitel = ?,
+                Vorname = ?,
+                Nachname = ?,
+                PLZ = ?,
+                Ort = ?,
+                StrasseHausNr = ?,
+                Geburtsdatum = ?
             WHERE Mitgliedsnummer = ?
             """;
 
-        int updatedRows = jdbcTemplate.update(sql, vorname, nachname, ort, mitgliedsnummer);
+        int updatedRows = jdbcTemplate.update(
+                sql,
+                r.anrede(),
+                r.akademischerTitel(),
+                r.vorname(),
+                r.nachname(),
+                r.plz(),
+                r.ort(),
+                r.strasseHausNr(),
+                r.geburtsdatum(),
+                mitgliedsnummer
+        );
 
         if (updatedRows == 0) {
             throw new NotFoundException("Mitglied mit Nummer " + mitgliedsnummer + " wurde nicht gefunden.");
@@ -322,19 +351,25 @@ public class MemberRepository {
             AkademischerTitel,
             Vorname,
             Nachname,
-            Ort
+            PLZ,
+            Ort,
+            StrasseHausNr,
+            Geburtsdatum
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """;
 
         jdbcTemplate.update(
                 sql,
                 id,
-                "Herr",
-                "",
+                s != null && s.anrede() != null ? s.anrede() : "Herr",
+                s != null && s.akademischerTitel() != null ? s.akademischerTitel() : "",
                 s != null ? s.vorname() : null,
                 s != null ? s.nachname() : null,
-                s != null ? s.ort() : null
+                s != null ? s.plz() : null,
+                s != null ? s.ort() : null,
+                s != null ? s.strasseHausNr() : null,
+                s != null ? s.geburtsdatum() : null
         );
     }
 

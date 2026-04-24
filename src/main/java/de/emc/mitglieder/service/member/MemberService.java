@@ -59,12 +59,7 @@ public class MemberService {
     }
 
     public MemberDetailDto updateStammdaten(String mitgliedsnummer, UpdateStammdatenRequest request) {
-        memberRepository.updateStammdaten(
-                mitgliedsnummer,
-                request.vorname(),
-                request.nachname(),
-                request.ort()
-        );
+        memberRepository.updateStammdaten(mitgliedsnummer, request);
 
         return memberRepository.findMemberById(mitgliedsnummer);
     }
