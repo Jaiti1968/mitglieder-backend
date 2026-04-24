@@ -60,4 +60,16 @@ public class MemberService {
                 request.ort()
         );
     }
+
+    public void updateKontakt(String mitgliedsnummer, UpdateKontaktRequest request) {
+        memberRepository.updateKontakt(
+                mitgliedsnummer,
+                request.telefonPrivat(),
+                request.telefonGeschaeftlich(),
+                request.mobiltelefon(),
+                request.email(),
+                request.adresszusatz(),
+                request.briefanrede()
+        );
+    }
 }

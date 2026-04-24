@@ -2,6 +2,7 @@ package de.emc.mitglieder.controller;
 
 import de.emc.mitglieder.dto.member.MemberDetailDto;
 import de.emc.mitglieder.dto.member.MemberListResponse;
+import de.emc.mitglieder.dto.member.UpdateKontaktRequest;
 import de.emc.mitglieder.dto.member.UpdateStammdatenRequest;
 import de.emc.mitglieder.service.member.MemberService;
 import org.springframework.web.bind.annotation.*;
@@ -37,5 +38,13 @@ public class MemberController {
             @RequestBody UpdateStammdatenRequest request
     ) {
         memberService.updateStammdaten(mitgliedsnummer, request);
+    }
+
+    @PutMapping("/api/members/{mitgliedsnummer}/kontakt")
+    public void updateKontakt(
+            @PathVariable String mitgliedsnummer,
+            @RequestBody UpdateKontaktRequest request
+    ) {
+        memberService.updateKontakt(mitgliedsnummer, request);
     }
 }

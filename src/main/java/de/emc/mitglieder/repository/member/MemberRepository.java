@@ -225,4 +225,37 @@ public class MemberRepository {
 
         jdbcTemplate.update(sql, vorname, nachname, ort, mitgliedsnummer);
     }
+
+    public void updateKontakt(
+            String mitgliedsnummer,
+            String telefonPrivat,
+            String telefonGeschaeftlich,
+            String mobiltelefon,
+            String email,
+            String adresszusatz,
+            String briefanrede
+    ) {
+        String sql = """
+            UPDATE tblKontaktdaten
+            SET
+                Telefon_privat = ?,
+                Telefon_geschaeftlich = ?,
+                Mobiltelefon = ?,
+                EMail = ?,
+                Adresszusatz = ?,
+                Briefanrede = ?
+            WHERE Mitgliedsnummer = ?
+            """;
+
+        jdbcTemplate.update(
+                sql,
+                telefonPrivat,
+                telefonGeschaeftlich,
+                mobiltelefon,
+                email,
+                adresszusatz,
+                briefanrede,
+                mitgliedsnummer
+        );
+    }
 }
