@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.dao.EmptyResultDataAccessException;
 import de.emc.mitglieder.exception.NotFoundException;
+import de.emc.mitglieder.constant.MemberDefaults;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -385,8 +386,8 @@ public class MemberRepository {
         jdbcTemplate.update(
                 sql,
                 id,
-                s != null && s.anrede() != null ? s.anrede() : "Herr",
-                s != null && s.akademischerTitel() != null ? s.akademischerTitel() : "",
+                s != null && s.anrede() != null ? s.anrede() : MemberDefaults.DEFAULT_ANREDE,
+                s != null && s.akademischerTitel() != null ? s.akademischerTitel() : MemberDefaults.DEFAULT_AKADEMISCHER_TITEL,
                 s != null ? s.vorname() : null,
                 s != null ? s.nachname() : null,
                 s != null ? s.plz() : null,
@@ -414,9 +415,9 @@ public class MemberRepository {
                 id,
                 m != null ? m.eintritt() : null,
                 m != null ? m.austritt() : null,
-                m != null && m.mitgliedsstatusId() != null ? m.mitgliedsstatusId() : 4,
-                m != null && m.stimmeId() != null ? m.stimmeId() : 6,
-                m != null && m.kammerchor() != null ? m.kammerchor() : false
+                m != null && m.mitgliedsstatusId() != null ? m.mitgliedsstatusId() : MemberDefaults.DEFAULT_MITGLIEDSSTATUS_ID,
+                m != null && m.stimmeId() != null ? m.stimmeId() : MemberDefaults.DEFAULT_STIMME_ID,
+                m != null && m.kammerchor() != null ? m.kammerchor() : MemberDefaults.DEFAULT_KAMMERCHOR
         );
     }
 
@@ -442,21 +443,26 @@ public class MemberRepository {
                 k != null ? k.mobiltelefon() : null,
                 k != null ? k.email() : null,
                 k != null ? k.adresszusatz() : null,
-                k != null && k.briefanrede() != null ? k.briefanrede() : "Lieber Sangesfreund"
+                k != null && k.briefanrede() != null ? k.briefanrede() : MemberDefaults.DEFAULT_BRIEFANREDE
         );
     }
 
     public void insertChorkleidung(String id) {
         String sql = """
-        INSERT INTO tblChorkleidung (
-            Mitgliedsnummer,
-            Neubeschaffung,
-            Barzahlung
-        )
-        VALUES (?, 0, 0)
-    """;
+            INSERT INTO tblChorkleidung (
+                Mitgliedsnummer,
+                Neubeschaffung,
+                Barzahlung
+         )
+        VALUES (?, ?, ?)
+        """;
 
-        jdbcTemplate.update(sql, id);
+        jdbcTemplate.update(
+                sql,
+                id,
+                MemberDefaults.DEFAULT_NEUBESCHAFFUNG,
+                MemberDefaults.DEFAULT_BARZAHLUNG
+        );
     }
 
     public void insertDatenschutz(String id) {
