@@ -1,4 +1,4 @@
-package de.emc.mitglieder.dto.member;
+package de.emc.mitglieder.dto.request;
 
 import jakarta.validation.constraints.NotNull;
 

@@ -1,7 +1,8 @@
 package de.emc.mitglieder.repository.member;
 
 import de.emc.mitglieder.dto.member.*;
-import org.springframework.dao.DataAccessException;
+import de.emc.mitglieder.dto.request.UpdateMitgliedschaftRequest;
+import de.emc.mitglieder.dto.request.UpdateStammdatenRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.dao.EmptyResultDataAccessException;

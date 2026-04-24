@@ -1,10 +1,13 @@
 package de.emc.mitglieder.service.member;
 
 import de.emc.mitglieder.dto.member.*;
+import de.emc.mitglieder.dto.request.UpdateKontaktRequest;
+import de.emc.mitglieder.dto.request.UpdateMitgliedschaftRequest;
+import de.emc.mitglieder.dto.request.UpdateStammdatenRequest;
 import de.emc.mitglieder.repository.LookupRepository;
 import de.emc.mitglieder.repository.member.MemberRepository;
 import org.springframework.stereotype.Service;
-import de.emc.mitglieder.dto.member.CreateMemberRequest;
+import de.emc.mitglieder.dto.request.CreateMemberRequest;
 import org.springframework.transaction.annotation.Transactional;
 import de.emc.mitglieder.exception.BadRequestException;
 
