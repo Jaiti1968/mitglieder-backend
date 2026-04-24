@@ -3,6 +3,8 @@ package de.emc.mitglieder.service.member;
 import de.emc.mitglieder.dto.member.*;
 import de.emc.mitglieder.repository.member.MemberRepository;
 import org.springframework.stereotype.Service;
+import de.emc.mitglieder.dto.member.CreateMemberRequest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -85,5 +87,22 @@ public class MemberService {
         );
 
         return memberRepository.findMemberById(mitgliedsnummer);
+    }
+
+    @Transactional
+    public MemberDetailDto createMember(CreateMemberRequest request) {
+
+        String currentNumber = memberRepository.getCurrentMitgliedsnummer();
+        String nextNumber = memberRepository.getNextMitgliedsnummer(currentNumber);
+
+        memberRepository.updateNeueMitgliedsnummer(nextNumber);
+
+        memberRepository.insertMitglied(currentNumber, request.stammdaten());
+        memberRepository.insertMitgliedschaft(currentNumber, request.mitgliedschaft());
+        memberRepository.insertKontakt(currentNumber, request.kontakt());
+        memberRepository.insertChorkleidung(currentNumber);
+        memberRepository.insertDatenschutz(currentNumber);
+
+        return memberRepository.findMemberById(currentNumber);
     }
 }

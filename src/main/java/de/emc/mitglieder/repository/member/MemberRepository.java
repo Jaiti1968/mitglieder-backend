@@ -1,8 +1,11 @@
 package de.emc.mitglieder.repository.member;
 
 import de.emc.mitglieder.dto.member.*;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.dao.EmptyResultDataAccessException;
+import de.emc.mitglieder.exception.NotFoundException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -181,34 +184,38 @@ public class MemberRepository {
                 WHERE m.Mitgliedsnummer = ?
                 """;
 
-        return jdbcTemplate.queryForObject(sql, (rs, rowNum) ->
-                        new MemberDetailDto(
-                                rs.getString("Mitgliedsnummer"),
+        try {
+            return jdbcTemplate.queryForObject(sql, (rs, rowNum) ->
+                            new MemberDetailDto(
+                                    rs.getString("Mitgliedsnummer"),
 
-                                new StammdatenDto(
-                                        rs.getString("Vorname"),
-                                        rs.getString("Nachname"),
-                                        rs.getString("Ort")
-                                ),
+                                    new StammdatenDto(
+                                            rs.getString("Vorname"),
+                                            rs.getString("Nachname"),
+                                            rs.getString("Ort")
+                                    ),
 
-                                new KontaktDto(
-                                        rs.getString("Telefon_privat"),
-                                        rs.getString("Telefon_geschaeftlich"),
-                                        rs.getString("Mobiltelefon"),
-                                        rs.getString("EMail"),
-                                        rs.getString("Adresszusatz"),
-                                        rs.getString("Briefanrede")
-                                ),
+                                    new KontaktDto(
+                                            rs.getString("Telefon_privat"),
+                                            rs.getString("Telefon_geschaeftlich"),
+                                            rs.getString("Mobiltelefon"),
+                                            rs.getString("EMail"),
+                                            rs.getString("Adresszusatz"),
+                                            rs.getString("Briefanrede")
+                                    ),
 
-                                new MitgliedschaftDto(
-                                        (Integer) rs.getObject("IDMitgliederstatus"),
-                                        rs.getString("Mitgliederstatus"),
-                                        (Integer) rs.getObject("IDStimme"),
-                                        rs.getString("Stimme")
-                                )
-                        ),
-                mitgliedsnummer
-        );
+                                    new MitgliedschaftDto(
+                                            (Integer) rs.getObject("IDMitgliederstatus"),
+                                            rs.getString("Mitgliederstatus"),
+                                            (Integer) rs.getObject("IDStimme"),
+                                            rs.getString("Stimme")
+                                    )
+                            ),
+                    mitgliedsnummer
+            );
+        } catch (EmptyResultDataAccessException ex) {
+            throw new NotFoundException("Mitglied mit Nummer " + mitgliedsnummer + " wurde nicht gefunden.");
+        }
     }
 
     public void updateStammdaten(
@@ -223,7 +230,11 @@ public class MemberRepository {
             WHERE Mitgliedsnummer = ?
             """;
 
-        jdbcTemplate.update(sql, vorname, nachname, ort, mitgliedsnummer);
+        int updatedRows = jdbcTemplate.update(sql, vorname, nachname, ort, mitgliedsnummer);
+
+        if (updatedRows == 0) {
+            throw new NotFoundException("Mitglied mit Nummer " + mitgliedsnummer + " wurde nicht gefunden.");
+        }
     }
 
     public void updateKontakt(
@@ -247,7 +258,7 @@ public class MemberRepository {
             WHERE Mitgliedsnummer = ?
             """;
 
-        jdbcTemplate.update(
+        int updatedRows = jdbcTemplate.update(
                 sql,
                 telefonPrivat,
                 telefonGeschaeftlich,
@@ -257,6 +268,10 @@ public class MemberRepository {
                 briefanrede,
                 mitgliedsnummer
         );
+
+        if (updatedRows == 0) {
+            throw new NotFoundException("Mitglied mit Nummer " + mitgliedsnummer + " wurde nicht gefunden.");
+        }
     }
 
     public void updateMitgliedschaft(
@@ -272,6 +287,119 @@ public class MemberRepository {
             WHERE Mitgliedsnummer = ?
             """;
 
-        jdbcTemplate.update(sql, statusId, stimmeId, mitgliedsnummer);
+        int updatedRows = jdbcTemplate.update(sql, statusId, stimmeId, mitgliedsnummer);
+
+        if (updatedRows == 0) {
+            throw new NotFoundException("Mitglied mit Nummer " + mitgliedsnummer + " wurde nicht gefunden.");
+        }
+    }
+
+    public String getCurrentMitgliedsnummer() {
+        String sql = "SELECT neueMitgliedsnummer FROM tblAllgemein_FT";
+        return jdbcTemplate.queryForObject(sql, String.class);
+    }
+
+    public String getNextMitgliedsnummer(String current) {
+        int number = Integer.parseInt(current.substring(1));
+        return "N" + (number + 1);
+    }
+
+    public void updateNeueMitgliedsnummer(String nextNumber) {
+        String sql = "UPDATE tblAllgemein_FT SET neueMitgliedsnummer = ?";
+        jdbcTemplate.update(sql, nextNumber);
+    }
+
+    public void insertMitglied(String id, StammdatenDto s) {
+        String sql = """
+        INSERT INTO tblMitglieder (
+            Mitgliedsnummer,
+            Anrede,
+            AkademischerTitel,
+            Vorname,
+            Nachname,
+            Ort
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+    """;
+
+        jdbcTemplate.update(
+                sql,
+                id,
+                "Herr",
+                "",
+                s != null ? s.vorname() : null,
+                s != null ? s.nachname() : null,
+                s != null ? s.ort() : null
+        );
+    }
+
+    public void insertMitgliedschaft(String id, MitgliedschaftDto m) {
+        String sql = """
+        INSERT INTO tblMitgliedschaft (
+            Mitgliedsnummer,
+            IDMitgliederstatus,
+            IDStimme,
+            Kammerchor
+        )
+        VALUES (?, ?, ?, ?)
+    """;
+
+        jdbcTemplate.update(
+                sql,
+                id,
+                m != null && m.mitgliedsstatusId() != null ? m.mitgliedsstatusId() : 4,
+                m != null && m.stimmeId() != null ? m.stimmeId() : 6,
+                0 // Default wie Access
+        );
+    }
+
+    public void insertKontakt(String id, KontaktDto k) {
+        String sql = """
+        INSERT INTO tblKontaktdaten (
+            Mitgliedsnummer,
+            Telefon_privat,
+            Telefon_geschaeftlich,
+            Mobiltelefon,
+            EMail,
+            Adresszusatz,
+            Briefanrede
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """;
+
+        jdbcTemplate.update(
+                sql,
+                id,
+                k != null ? k.telefonPrivat() : null,
+                k != null ? k.telefonGeschaeftlich() : null,
+                k != null ? k.mobiltelefon() : null,
+                k != null ? k.email() : null,
+                k != null ? k.adresszusatz() : null,
+                k != null && k.briefanrede() != null ? k.briefanrede() : "Lieber Sangesfreund"
+        );
+    }
+
+    public void insertChorkleidung(String id) {
+        String sql = """
+        INSERT INTO tblChorkleidung (
+            Mitgliedsnummer,
+            Neubeschaffung,
+            Barzahlung
+        )
+        VALUES (?, 0, 0)
+    """;
+
+        jdbcTemplate.update(sql, id);
+    }
+
+    public void insertDatenschutz(String id) {
+        String sql = """
+        INSERT INTO tblDatenschutz (
+            Mitgliedsnummer
+        )
+        VALUES (?)
+    """;
+
+        jdbcTemplate.update(sql, id);
     }
 }

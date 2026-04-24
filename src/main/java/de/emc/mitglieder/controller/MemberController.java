@@ -3,6 +3,9 @@ package de.emc.mitglieder.controller;
 import de.emc.mitglieder.dto.member.*;
 import de.emc.mitglieder.service.member.MemberService;
 import org.springframework.web.bind.annotation.*;
+import de.emc.mitglieder.dto.member.CreateMemberRequest;
+import org.springframework.web.bind.annotation.PostMapping;
+import jakarta.validation.Valid;
 
 @RestController
 public class MemberController {
@@ -32,7 +35,7 @@ public class MemberController {
     @PutMapping("/api/members/{mitgliedsnummer}/stammdaten")
     public MemberDetailDto updateStammdaten(
             @PathVariable String mitgliedsnummer,
-            @RequestBody UpdateStammdatenRequest request
+            @RequestBody @Valid UpdateStammdatenRequest request
     ) {
         return memberService.updateStammdaten(mitgliedsnummer, request);
     }
@@ -40,7 +43,7 @@ public class MemberController {
     @PutMapping("/api/members/{mitgliedsnummer}/kontakt")
     public MemberDetailDto updateKontakt(
             @PathVariable String mitgliedsnummer,
-            @RequestBody UpdateKontaktRequest request
+            @RequestBody @Valid UpdateKontaktRequest request
     ) {
         return memberService.updateKontakt(mitgliedsnummer, request);
     }
@@ -48,8 +51,13 @@ public class MemberController {
     @PutMapping("/api/members/{mitgliedsnummer}/mitgliedschaft")
     public MemberDetailDto updateMitgliedschaft(
             @PathVariable String mitgliedsnummer,
-            @RequestBody UpdateMitgliedschaftRequest request
+            @RequestBody @Valid UpdateMitgliedschaftRequest request
     ) {
         return memberService.updateMitgliedschaft(mitgliedsnummer, request);
+    }
+
+    @PostMapping("/api/members")
+    public MemberDetailDto createMember(@RequestBody CreateMemberRequest request) {
+        return memberService.createMember(request);
     }
 }
