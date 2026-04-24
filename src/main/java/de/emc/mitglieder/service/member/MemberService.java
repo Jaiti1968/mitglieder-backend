@@ -1,10 +1,12 @@
 package de.emc.mitglieder.service.member;
 
 import de.emc.mitglieder.dto.member.*;
+import de.emc.mitglieder.repository.LookupRepository;
 import de.emc.mitglieder.repository.member.MemberRepository;
 import org.springframework.stereotype.Service;
 import de.emc.mitglieder.dto.member.CreateMemberRequest;
 import org.springframework.transaction.annotation.Transactional;
+import de.emc.mitglieder.exception.BadRequestException;
 
 import java.util.List;
 
@@ -12,9 +14,11 @@ import java.util.List;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final LookupRepository lookupRepository;
 
-    public MemberService(MemberRepository memberRepository) {
+    public MemberService(MemberRepository memberRepository, LookupRepository lookupRepository) {
         this.memberRepository = memberRepository;
+        this.lookupRepository = lookupRepository;
     }
 
     public MemberListResponse getMembers(
@@ -80,6 +84,14 @@ public class MemberService {
     }
 
     public MemberDetailDto updateMitgliedschaft(String mitgliedsnummer, UpdateMitgliedschaftRequest request) {
+
+        validateMitgliedschaft(new MitgliedschaftDto(
+                request.mitgliedsstatusId(),
+                null,
+                request.stimmeId(),
+                null
+        ));
+
         memberRepository.updateMitgliedschaft(
                 mitgliedsnummer,
                 request.mitgliedsstatusId(),
@@ -92,7 +104,9 @@ public class MemberService {
     @Transactional
     public MemberDetailDto createMember(CreateMemberRequest request) {
 
-        String currentNumber = memberRepository.getCurrentMitgliedsnummer();
+        validateMitgliedschaft(request.mitgliedschaft());
+
+        String currentNumber = memberRepository.getCurrentMitgliedsnummerForUpdate();
         String nextNumber = memberRepository.getNextMitgliedsnummer(currentNumber);
 
         memberRepository.updateNeueMitgliedsnummer(nextNumber);
@@ -104,5 +118,21 @@ public class MemberService {
         memberRepository.insertDatenschutz(currentNumber);
 
         return memberRepository.findMemberById(currentNumber);
+    }
+
+    private void validateMitgliedschaft(MitgliedschaftDto m) {
+        if (m == null) {
+            return;
+        }
+
+        if (m.mitgliedsstatusId() != null &&
+                !lookupRepository.existsMemberStatus(m.mitgliedsstatusId())) {
+            throw new BadRequestException("Ungültiger Mitgliederstatus");
+        }
+
+        if (m.stimmeId() != null &&
+                !lookupRepository.existsVoice(m.stimmeId())) {
+            throw new BadRequestException("Ungültige Stimme");
+        }
     }
 }

@@ -48,4 +48,26 @@ public class LookupRepository {
                 )
         );
     }
+
+    public boolean existsMemberStatus(Integer id) {
+        String sql = """
+            SELECT COUNT(*)
+            FROM tblMitgliederstatus_FT
+            WHERE IDMitgliederstatus = ?
+            """;
+
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
+        return count != null && count > 0;
+    }
+
+    public boolean existsVoice(Integer id) {
+        String sql = """
+            SELECT COUNT(*)
+            FROM tblStimme_FT
+            WHERE IDStimme = ?
+            """;
+
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
+        return count != null && count > 0;
+    }
 }

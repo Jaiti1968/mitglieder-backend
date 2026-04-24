@@ -294,8 +294,13 @@ public class MemberRepository {
         }
     }
 
-    public String getCurrentMitgliedsnummer() {
-        String sql = "SELECT neueMitgliedsnummer FROM tblAllgemein_FT";
+    public String getCurrentMitgliedsnummerForUpdate() {
+        String sql = """
+            SELECT neueMitgliedsnummer
+            FROM tblAllgemein_FT
+            FOR UPDATE
+            """;
+
         return jdbcTemplate.queryForObject(sql, String.class);
     }
 
