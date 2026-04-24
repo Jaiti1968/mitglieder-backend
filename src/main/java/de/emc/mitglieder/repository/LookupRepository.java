@@ -17,12 +17,12 @@ public class LookupRepository {
 
     public List<LookupItemDto> findMemberStatus() {
         String sql = """
-                SELECT 
-                    IDMitgliederstatus,
-                    Mitgliederstatus
-                FROM tblMitgliederstatus_FT
-                ORDER BY IDMitgliederstatus
-                """;
+                 SELECT\s
+                     IDMitgliederstatus,
+                     Mitgliederstatus
+                 FROM tblMitgliederstatus_FT
+                 ORDER BY IDMitgliederstatus
+                \s""";
 
         return jdbcTemplate.query(sql, (rs, rowNum) ->
                 new LookupItemDto(
@@ -34,12 +34,12 @@ public class LookupRepository {
 
     public List<LookupItemDto> findVoices() {
         String sql = """
-                SELECT 
-                    IDStimme,
-                    Stimme
-                FROM tblStimme_FT
-                ORDER BY IDStimme
-                """;
+                 SELECT\s
+                     IDStimme,
+                     Stimme
+                 FROM tblStimme_FT
+                 ORDER BY IDStimme
+                \s""";
 
         return jdbcTemplate.query(sql, (rs, rowNum) ->
                 new LookupItemDto(
