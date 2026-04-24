@@ -52,16 +52,18 @@ public class MemberService {
         return memberRepository.findMemberById(mitgliedsnummer);
     }
 
-    public void updateStammdaten(String mitgliedsnummer, UpdateStammdatenRequest request) {
+    public MemberDetailDto updateStammdaten(String mitgliedsnummer, UpdateStammdatenRequest request) {
         memberRepository.updateStammdaten(
                 mitgliedsnummer,
                 request.vorname(),
                 request.nachname(),
                 request.ort()
         );
+
+        return memberRepository.findMemberById(mitgliedsnummer);
     }
 
-    public void updateKontakt(String mitgliedsnummer, UpdateKontaktRequest request) {
+    public MemberDetailDto updateKontakt(String mitgliedsnummer, UpdateKontaktRequest request) {
         memberRepository.updateKontakt(
                 mitgliedsnummer,
                 request.telefonPrivat(),
@@ -71,5 +73,17 @@ public class MemberService {
                 request.adresszusatz(),
                 request.briefanrede()
         );
+
+        return memberRepository.findMemberById(mitgliedsnummer);
+    }
+
+    public MemberDetailDto updateMitgliedschaft(String mitgliedsnummer, UpdateMitgliedschaftRequest request) {
+        memberRepository.updateMitgliedschaft(
+                mitgliedsnummer,
+                request.mitgliedsstatusId(),
+                request.stimmeId()
+        );
+
+        return memberRepository.findMemberById(mitgliedsnummer);
     }
 }

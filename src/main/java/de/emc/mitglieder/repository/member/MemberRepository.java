@@ -258,4 +258,20 @@ public class MemberRepository {
                 mitgliedsnummer
         );
     }
+
+    public void updateMitgliedschaft(
+            String mitgliedsnummer,
+            Integer statusId,
+            Integer stimmeId
+    ) {
+        String sql = """
+            UPDATE tblMitgliedschaft
+            SET
+                IDMitgliederstatus = ?,
+                IDStimme = ?
+            WHERE Mitgliedsnummer = ?
+            """;
+
+        jdbcTemplate.update(sql, statusId, stimmeId, mitgliedsnummer);
+    }
 }

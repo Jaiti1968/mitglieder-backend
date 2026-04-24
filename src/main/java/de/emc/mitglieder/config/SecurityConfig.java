@@ -18,7 +18,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/lookups/**").permitAll()
                         .requestMatchers("/api/members").permitAll()
                         .requestMatchers("/api/members/**").permitAll()
-                        .requestMatchers("/api/members/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults());
