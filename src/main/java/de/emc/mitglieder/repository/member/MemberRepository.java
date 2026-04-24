@@ -167,10 +167,13 @@ public class MemberRepository {
                     k.Adresszusatz,
                     k.Briefanrede,
 
+                    ms.Eintritt,
+                    ms.Austritt,
                     ms.IDMitgliederstatus,
                     msf.Mitgliederstatus,
                     ms.IDStimme,
-                    sf.Stimme
+                    sf.Stimme,
+                    ms.Kammerchor
 
                 FROM tblMitglieder m
 
@@ -217,10 +220,19 @@ public class MemberRepository {
                                     ),
 
                                     new MitgliedschaftDto(
+                                            rs.getObject("Eintritt") != null
+                                                    ? rs.getTimestamp("Eintritt").toLocalDateTime().toLocalDate()
+                                                    : null,
+                                            rs.getObject("Austritt") != null
+                                                    ? rs.getTimestamp("Austritt").toLocalDateTime().toLocalDate()
+                                                    : null,
                                             (Integer) rs.getObject("IDMitgliederstatus"),
                                             rs.getString("Mitgliederstatus"),
                                             (Integer) rs.getObject("IDStimme"),
-                                            rs.getString("Stimme")
+                                            rs.getString("Stimme"),
+                                            rs.getObject("Kammerchor") != null
+                                                    ? rs.getBoolean("Kammerchor")
+                                                    : null
                                     )
                             ),
                     mitgliedsnummer
@@ -305,18 +317,28 @@ public class MemberRepository {
 
     public void updateMitgliedschaft(
             String mitgliedsnummer,
-            Integer statusId,
-            Integer stimmeId
+            UpdateMitgliedschaftRequest r
     ) {
         String sql = """
             UPDATE tblMitgliedschaft
             SET
+                Eintritt = ?,
+                Austritt = ?,
                 IDMitgliederstatus = ?,
-                IDStimme = ?
+                IDStimme = ?,
+                Kammerchor = ?
             WHERE Mitgliedsnummer = ?
             """;
 
-        int updatedRows = jdbcTemplate.update(sql, statusId, stimmeId, mitgliedsnummer);
+        int updatedRows = jdbcTemplate.update(
+                sql,
+                r.eintritt(),
+                r.austritt(),
+                r.mitgliedsstatusId(),
+                r.stimmeId(),
+                r.kammerchor(),
+                mitgliedsnummer
+        );
 
         if (updatedRows == 0) {
             throw new NotFoundException("Mitglied mit Nummer " + mitgliedsnummer + " wurde nicht gefunden.");
@@ -377,19 +399,23 @@ public class MemberRepository {
         String sql = """
         INSERT INTO tblMitgliedschaft (
             Mitgliedsnummer,
+            Eintritt,
+            Austritt,
             IDMitgliederstatus,
             IDStimme,
             Kammerchor
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
     """;
 
         jdbcTemplate.update(
                 sql,
                 id,
+                m != null ? m.eintritt() : null,
+                m != null ? m.austritt() : null,
                 m != null && m.mitgliedsstatusId() != null ? m.mitgliedsstatusId() : 4,
                 m != null && m.stimmeId() != null ? m.stimmeId() : 6,
-                0 // Default wie Access
+                m != null && m.kammerchor() != null ? m.kammerchor() : false
         );
     }
 

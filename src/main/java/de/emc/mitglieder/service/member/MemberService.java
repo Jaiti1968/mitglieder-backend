@@ -81,17 +81,16 @@ public class MemberService {
     public MemberDetailDto updateMitgliedschaft(String mitgliedsnummer, UpdateMitgliedschaftRequest request) {
 
         validateMitgliedschaft(new MitgliedschaftDto(
+                null,
+                null,
                 request.mitgliedsstatusId(),
                 null,
                 request.stimmeId(),
+                null,
                 null
         ));
 
-        memberRepository.updateMitgliedschaft(
-                mitgliedsnummer,
-                request.mitgliedsstatusId(),
-                request.stimmeId()
-        );
+        memberRepository.updateMitgliedschaft(mitgliedsnummer, request);
 
         return memberRepository.findMemberById(mitgliedsnummer);
     }
