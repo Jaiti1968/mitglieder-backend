@@ -10,6 +10,7 @@ import de.emc.mitglieder.dto.request.CreateMemberRequest;
 import org.springframework.web.bind.annotation.PostMapping;
 import jakarta.validation.Valid;
 
+@SuppressWarnings("unused")
 @RestController
 public class MemberController {
 

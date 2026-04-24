@@ -34,12 +34,12 @@ public class LookupRepository {
 
     public List<LookupItemDto> findVoices() {
         String sql = """
-            SELECT 
-                IDStimme,
-                Stimme
-            FROM tblStimme_FT
-            ORDER BY IDStimme
-            """;
+                SELECT 
+                    IDStimme,
+                    Stimme
+                FROM tblStimme_FT
+                ORDER BY IDStimme
+                """;
 
         return jdbcTemplate.query(sql, (rs, rowNum) ->
                 new LookupItemDto(
@@ -51,10 +51,10 @@ public class LookupRepository {
 
     public boolean existsMemberStatus(Integer id) {
         String sql = """
-            SELECT COUNT(*)
-            FROM tblMitgliederstatus_FT
-            WHERE IDMitgliederstatus = ?
-            """;
+                SELECT COUNT(*)
+                FROM tblMitgliederstatus_FT
+                WHERE IDMitgliederstatus = ?
+                """;
 
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
         return count != null && count > 0;
@@ -62,10 +62,10 @@ public class LookupRepository {
 
     public boolean existsVoice(Integer id) {
         String sql = """
-            SELECT COUNT(*)
-            FROM tblStimme_FT
-            WHERE IDStimme = ?
-            """;
+                SELECT COUNT(*)
+                FROM tblStimme_FT
+                WHERE IDStimme = ?
+                """;
 
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
         return count != null && count > 0;

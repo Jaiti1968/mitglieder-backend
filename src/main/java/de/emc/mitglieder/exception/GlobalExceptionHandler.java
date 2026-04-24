@@ -4,10 +4,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+
 import java.util.stream.Collectors;
 
 import java.time.LocalDateTime;
 
+@SuppressWarnings("unused")
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -51,7 +53,7 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-                "Interner Serverfehler",
+                ex.getMessage(),
                 request.getRequestURI()
         );
     }
@@ -65,7 +67,7 @@ public class GlobalExceptionHandler {
         String message = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
-                .map(error -> error.getDefaultMessage())
+                .map(org.springframework.validation.FieldError::getDefaultMessage)
                 .collect(Collectors.joining("; "));
 
         return new ErrorResponse(
