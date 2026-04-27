@@ -10,6 +10,8 @@ import de.emc.mitglieder.dto.request.CreateMemberRequest;
 import org.springframework.web.bind.annotation.PostMapping;
 import jakarta.validation.Valid;
 
+import java.util.List;
+
 @SuppressWarnings("unused")
 @RestController
 public class MemberController {
@@ -23,8 +25,8 @@ public class MemberController {
     @GetMapping("/api/members")
     public MemberListResponse getMembers(
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) Integer statusId,
-            @RequestParam(required = false) Integer stimmeId,
+            @RequestParam(required = false) List<Integer> statusId,
+            @RequestParam(required = false) List<Integer> stimmeId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize
     ) {

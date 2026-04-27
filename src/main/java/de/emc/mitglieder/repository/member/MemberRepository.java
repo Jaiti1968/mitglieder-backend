@@ -24,8 +24,8 @@ public class MemberRepository {
 
     public List<MemberListItemDto> findMembers(
             String search,
-            Integer statusId,
-            Integer stimmeId,
+            List<Integer> statusIds,
+            List<Integer> stimmeIds,
             int page,
             int pageSize
     ) {
@@ -70,14 +70,18 @@ public class MemberRepository {
             params.add(like);
         }
 
-        if (statusId != null) {
-            sql.append("\n AND ms.IDMitgliederstatus = ?");
-            params.add(statusId);
+        if (statusIds != null && !statusIds.isEmpty()) {
+            sql.append("\n AND ms.IDMitgliederstatus IN (");
+            sql.append(String.join(",", java.util.Collections.nCopies(statusIds.size(), "?")));
+            sql.append(")");
+            params.addAll(statusIds);
         }
 
-        if (stimmeId != null) {
-            sql.append("\n AND ms.IDStimme = ?");
-            params.add(stimmeId);
+        if (stimmeIds != null && !stimmeIds.isEmpty()) {
+            sql.append("\n AND ms.IDStimme IN (");
+            sql.append(String.join(",", java.util.Collections.nCopies(stimmeIds.size(), "?")));
+            sql.append(")");
+            params.addAll(stimmeIds);
         }
 
         sql.append("""
@@ -106,8 +110,8 @@ public class MemberRepository {
 
     public long countMembers(
             String search,
-            Integer statusId,
-            Integer stimmeId
+            List<Integer> statusIds,
+            List<Integer> stimmeIds
     ) {
         StringBuilder sql = new StringBuilder("""
                 SELECT COUNT(*)
@@ -136,14 +140,18 @@ public class MemberRepository {
             params.add(like);
         }
 
-        if (statusId != null) {
-            sql.append("\n AND ms.IDMitgliederstatus = ?");
-            params.add(statusId);
+        if (statusIds != null && !statusIds.isEmpty()) {
+            sql.append("\n AND ms.IDMitgliederstatus IN (");
+            sql.append(String.join(",", java.util.Collections.nCopies(statusIds.size(), "?")));
+            sql.append(")");
+            params.addAll(statusIds);
         }
 
-        if (stimmeId != null) {
-            sql.append("\n AND ms.IDStimme = ?");
-            params.add(stimmeId);
+        if (stimmeIds != null && !stimmeIds.isEmpty()) {
+            sql.append("\n AND ms.IDStimme IN (");
+            sql.append(String.join(",", java.util.Collections.nCopies(stimmeIds.size(), "?")));
+            sql.append(")");
+            params.addAll(stimmeIds);
         }
 
         Long result = jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());

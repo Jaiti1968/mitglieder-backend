@@ -26,8 +26,8 @@ public class MemberService {
 
     public MemberListResponse getMembers(
             String search,
-            Integer statusId,
-            Integer stimmeId,
+            List<Integer> statusIds,
+            List<Integer> stimmeIds,
             int page,
             int pageSize
     ) {
@@ -43,8 +43,10 @@ public class MemberService {
             pageSize = 100;
         }
 
-        List<MemberListItemDto> items = memberRepository.findMembers(search, statusId, stimmeId, page, pageSize);
-        long totalItems = memberRepository.countMembers(search, statusId, stimmeId);
+        List<MemberListItemDto> items =
+                memberRepository.findMembers(search, statusIds, stimmeIds, page, pageSize);
+        long totalItems =
+                memberRepository.countMembers(search, statusIds, stimmeIds);
         int totalPages = (int) Math.ceil((double) totalItems / pageSize);
 
         PaginationDto pagination = new PaginationDto(
