@@ -1,9 +1,17 @@
 package de.emc.mitglieder.dto.member;
 
-public record MemberDetailDto(
-        String mitgliedsnummer,
-        StammdatenDto stammdaten,
-        KontaktDto kontakt,
-        MitgliedschaftDto mitgliedschaft
-) {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class MemberDetailDto {
+
+        private String mitgliedsnummer;
+        private StammdatenDto stammdaten;
+        private KontaktDto kontakt;
+        private MitgliedschaftDto mitgliedschaft;
+
 }

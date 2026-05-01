@@ -1,8 +1,7 @@
 package de.emc.mitglieder.repository.member;
 
 import de.emc.mitglieder.dto.member.*;
-import de.emc.mitglieder.dto.request.UpdateMitgliedschaftRequest;
-import de.emc.mitglieder.dto.request.UpdateStammdatenRequest;
+import de.emc.mitglieder.dto.request.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -12,6 +11,10 @@ import de.emc.mitglieder.mapper.MemberMapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+
+import static de.emc.mitglieder.mapper.MemberMapper.mapChorkleidung;
+import static de.emc.mitglieder.mapper.MemberMapper.mapDatenschutz;
 
 @Repository
 public class MemberRepository {
@@ -234,14 +237,14 @@ public class MemberRepository {
 
         int updatedRows = jdbcTemplate.update(
                 sql,
-                r.anrede(),
-                r.akademischerTitel(),
-                r.vorname(),
-                r.nachname(),
-                r.plz(),
-                r.ort(),
-                r.strasseHausNr(),
-                r.geburtsdatum(),
+                r.getAnrede(),
+                r.getAkademischerTitel(),
+                r.getVorname(),
+                r.getNachname(),
+                r.getPlz(),
+                r.getOrt(),
+                r.getStrasseHausNr(),
+                r.getGeburtsdatum(),
                 mitgliedsnummer
         );
 
@@ -304,11 +307,11 @@ public class MemberRepository {
 
         int updatedRows = jdbcTemplate.update(
                 sql,
-                r.eintritt(),
-                r.austritt(),
-                r.mitgliedsstatusId(),
-                r.stimmeId(),
-                r.kammerchor(),
+                r.getEintritt(),
+                r.getAustritt(),
+                r.getMitgliedsstatusId(),
+                r.getStimmeId(),
+                r.getKammerchor(),
                 mitgliedsnummer
         );
 
@@ -356,14 +359,14 @@ public class MemberRepository {
         jdbcTemplate.update(
                 sql,
                 id,
-                s != null && s.anrede() != null ? s.anrede() : MemberDefaults.DEFAULT_ANREDE,
-                s != null && s.akademischerTitel() != null ? s.akademischerTitel() : MemberDefaults.DEFAULT_AKADEMISCHER_TITEL,
-                s != null ? s.vorname() : null,
-                s != null ? s.nachname() : null,
-                s != null ? s.plz() : null,
-                s != null ? s.ort() : null,
-                s != null ? s.strasseHausNr() : null,
-                s != null ? s.geburtsdatum() : null
+                s != null && s.getAnrede() != null ? s.getAnrede() : MemberDefaults.DEFAULT_ANREDE,
+                s != null && s.getAkademischerTitel() != null ? s.getAkademischerTitel() : MemberDefaults.DEFAULT_AKADEMISCHER_TITEL,
+                s != null ? s.getVorname() : null,
+                s != null ? s.getNachname() : null,
+                s != null ? s.getPlz() : null,
+                s != null ? s.getOrt() : null,
+                s != null ? s.getStrasseHausNr() : null,
+                s != null ? s.getGeburtsdatum() : null
         );
     }
 
@@ -383,11 +386,11 @@ public class MemberRepository {
         jdbcTemplate.update(
                 sql,
                 id,
-                m != null ? m.eintritt() : null,
-                m != null ? m.austritt() : null,
-                m != null && m.mitgliedsstatusId() != null ? m.mitgliedsstatusId() : MemberDefaults.DEFAULT_MITGLIEDSSTATUS_ID,
-                m != null && m.stimmeId() != null ? m.stimmeId() : MemberDefaults.DEFAULT_STIMME_ID,
-                m != null && m.kammerchor() != null ? m.kammerchor() : MemberDefaults.DEFAULT_KAMMERCHOR
+                m != null ? m.getEintritt() : null,
+                m != null ? m.getAustritt() : null,
+                m != null && m.getMitgliedsstatusId() != null ? m.getMitgliedsstatusId() : MemberDefaults.DEFAULT_MITGLIEDSSTATUS_ID,
+                m != null && m.getStimmeId() != null ? m.getStimmeId() : MemberDefaults.DEFAULT_STIMME_ID,
+                m != null && m.getKammerchor() != null ? m.getKammerchor() : MemberDefaults.DEFAULT_KAMMERCHOR
         );
     }
 
@@ -408,12 +411,12 @@ public class MemberRepository {
         jdbcTemplate.update(
                 sql,
                 id,
-                k != null ? k.telefonPrivat() : null,
-                k != null ? k.telefonGeschaeftlich() : null,
-                k != null ? k.mobiltelefon() : null,
-                k != null ? k.email() : null,
-                k != null ? k.adresszusatz() : null,
-                k != null && k.briefanrede() != null ? k.briefanrede() : MemberDefaults.DEFAULT_BRIEFANREDE
+                k != null ? k.getTelefonPrivat() : null,
+                k != null ? k.getTelefonGeschaeftlich() : null,
+                k != null ? k.getMobiltelefon() : null,
+                k != null ? k.getEmail() : null,
+                k != null ? k.getAdresszusatz() : null,
+                k != null && k.getBriefanrede() != null ? k.getBriefanrede() : MemberDefaults.DEFAULT_BRIEFANREDE
         );
     }
 
@@ -444,5 +447,123 @@ public class MemberRepository {
     """;
 
         jdbcTemplate.update(sql, id);
+    }
+
+    public Optional<MemberDatenschutzDto> findDatenschutzByMitgliedsnummer(String mitgliedsnummer) {
+        String sql = """
+            SELECT
+                Mitgliedsnummer,
+                DatumDatenschutz,
+                DatenschutzNr14,
+                DatenschutzNr15,
+                DatenschutzNr16,
+                DatenschutzNr17,
+                DatenschutzNr18
+            FROM tblDatenschutz
+            WHERE Mitgliedsnummer = ?
+            """;
+
+        return jdbcTemplate.query(sql, rs -> {
+            if (rs.next()) {
+                return Optional.of(mapDatenschutz(rs));
+            }
+            return Optional.empty();
+        }, mitgliedsnummer);
+    }
+
+    public int updateDatenschutz(String mitgliedsnummer, UpdateDatenschutzRequest request) {
+        String sql = """
+            UPDATE tblDatenschutz
+            SET
+                DatumDatenschutz = ?,
+                DatenschutzNr14 = ?,
+                DatenschutzNr15 = ?,
+                DatenschutzNr16 = ?,
+                DatenschutzNr17 = ?,
+                DatenschutzNr18 = ?
+            WHERE Mitgliedsnummer = ?
+            """;
+
+        return jdbcTemplate.update(
+                sql,
+                request.getDatumDatenschutz(),
+                request.getDatenschutzNr14(),
+                request.getDatenschutzNr15(),
+                request.getDatenschutzNr16(),
+                request.getDatenschutzNr17(),
+                request.getDatenschutzNr18(),
+                mitgliedsnummer
+        );
+    }
+
+    public Optional<MemberChorkleidungDto> findChorkleidungByMitgliedsnummer(String mitgliedsnummer) {
+        String sql = """
+            SELECT
+                Mitgliedsnummer,
+                ehemaligeStimme,
+                UebergabeAm,
+                BemerkungUebergabe,
+                Neubeschaffung,
+                DatumAnteil,
+                Barzahlung,
+                Bearbeitungsstand,
+                RueckgabeAm,
+                BemerkungRueckgabe,
+                Kaufdatum,
+                Kaufpreis,
+                Sommerkleidung,
+                SommerkleidungErhalten,
+                SommerkleidungRueckgabe
+            FROM tblChorkleidung
+            WHERE Mitgliedsnummer = ?
+            """;
+
+        return jdbcTemplate.query(sql, rs -> {
+            if (rs.next()) {
+                return Optional.of(mapChorkleidung(rs));
+            }
+            return Optional.empty();
+        }, mitgliedsnummer);
+    }
+
+    public int updateChorkleidung(String mitgliedsnummer, UpdateChorkleidungRequest request) {
+        String sql = """
+            UPDATE tblChorkleidung
+            SET
+                ehemaligeStimme = ?,
+                UebergabeAm = ?,
+                BemerkungUebergabe = ?,
+                Neubeschaffung = ?,
+                DatumAnteil = ?,
+                Barzahlung = ?,
+                Bearbeitungsstand = ?,
+                RueckgabeAm = ?,
+                BemerkungRueckgabe = ?,
+                Kaufdatum = ?,
+                Kaufpreis = ?,
+                Sommerkleidung = ?,
+                SommerkleidungErhalten = ?,
+                SommerkleidungRueckgabe = ?
+            WHERE Mitgliedsnummer = ?
+            """;
+
+        return jdbcTemplate.update(
+                sql,
+                request.getEhemaligeStimme(),
+                request.getUebergabeAm(),
+                request.getBemerkungUebergabe(),
+                request.getNeubeschaffung(),
+                request.getDatumAnteil(),
+                request.getBarzahlung(),
+                request.getBearbeitungsstand(),
+                request.getRueckgabeAm(),
+                request.getBemerkungRueckgabe(),
+                request.getKaufdatum(),
+                request.getKaufpreis(),
+                request.getSommerkleidung(),
+                request.getSommerkleidungErhalten(),
+                request.getSommerkleidungRueckgabe(),
+                mitgliedsnummer
+        );
     }
 }

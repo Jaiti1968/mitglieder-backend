@@ -1,9 +1,8 @@
 package de.emc.mitglieder.service.member;
 
 import de.emc.mitglieder.dto.member.*;
-import de.emc.mitglieder.dto.request.UpdateKontaktRequest;
-import de.emc.mitglieder.dto.request.UpdateMitgliedschaftRequest;
-import de.emc.mitglieder.dto.request.UpdateStammdatenRequest;
+import de.emc.mitglieder.dto.request.*;
+import de.emc.mitglieder.exception.NotFoundException;
 import de.emc.mitglieder.repository.LookupRepository;
 import de.emc.mitglieder.repository.member.MemberRepository;
 import org.springframework.stereotype.Service;
@@ -72,12 +71,12 @@ public class MemberService {
     public MemberDetailDto updateKontakt(String mitgliedsnummer, UpdateKontaktRequest request) {
         memberRepository.updateKontakt(
                 mitgliedsnummer,
-                request.telefonPrivat(),
-                request.telefonGeschaeftlich(),
-                request.mobiltelefon(),
-                request.email(),
-                request.adresszusatz(),
-                request.briefanrede()
+                request.getTelefonPrivat(),
+                request.getTelefonGeschaeftlich(),
+                request.getMobiltelefon(),
+                request.getEmail(),
+                request.getAdresszusatz(),
+                request.getBriefanrede()
         );
 
         return memberRepository.findMemberById(mitgliedsnummer);
@@ -88,9 +87,9 @@ public class MemberService {
         validateMitgliedschaft(new MitgliedschaftDto(
                 null,
                 null,
-                request.mitgliedsstatusId(),
+                request.getMitgliedsstatusId(),
                 null,
-                request.stimmeId(),
+                request.getStimmeId(),
                 null,
                 null
         ));
@@ -103,16 +102,16 @@ public class MemberService {
     @Transactional
     public MemberDetailDto createMember(CreateMemberRequest request) {
 
-        validateMitgliedschaft(request.mitgliedschaft());
+        validateMitgliedschaft(request.getMitgliedschaft());
 
         String currentNumber = memberRepository.getCurrentMitgliedsnummerForUpdate();
         String nextNumber = memberRepository.getNextMitgliedsnummer(currentNumber);
 
         memberRepository.updateNeueMitgliedsnummer(nextNumber);
 
-        memberRepository.insertMitglied(currentNumber, request.stammdaten());
-        memberRepository.insertMitgliedschaft(currentNumber, request.mitgliedschaft());
-        memberRepository.insertKontakt(currentNumber, request.kontakt());
+        memberRepository.insertMitglied(currentNumber, request.getStammdaten());
+        memberRepository.insertMitgliedschaft(currentNumber, request.getMitgliedschaft());
+        memberRepository.insertKontakt(currentNumber, request.getKontakt());
         memberRepository.insertChorkleidung(currentNumber);
         memberRepository.insertDatenschutz(currentNumber);
 
@@ -124,14 +123,46 @@ public class MemberService {
             return;
         }
 
-        if (m.mitgliedsstatusId() != null &&
-                !lookupRepository.existsMemberStatus(m.mitgliedsstatusId())) {
+        if (m.getMitgliedsstatusId() != null &&
+                !lookupRepository.existsMemberStatus(m.getMitgliedsstatusId())) {
             throw new BadRequestException("Ungültiger Mitgliederstatus");
         }
 
-        if (m.stimmeId() != null &&
-                !lookupRepository.existsVoice(m.stimmeId())) {
+        if (m.getStimmeId() != null &&
+                !lookupRepository.existsVoice(m.getStimmeId())) {
             throw new BadRequestException("Ungültige Stimme");
         }
+    }
+
+    public MemberDatenschutzDto getDatenschutz(String mitgliedsnummer) {
+        return memberRepository.findDatenschutzByMitgliedsnummer(mitgliedsnummer)
+                .orElseThrow(() -> new NotFoundException("Datenschutz nicht gefunden für Mitglied " + mitgliedsnummer));
+    }
+
+    public MemberDatenschutzDto updateDatenschutz(String mitgliedsnummer, UpdateDatenschutzRequest request) {
+
+        int updatedRows = memberRepository.updateDatenschutz(mitgliedsnummer, request);
+
+        if (updatedRows == 0) {
+            throw new NotFoundException("Datenschutz nicht gefunden für Mitglied " + mitgliedsnummer);
+        }
+
+        return getDatenschutz(mitgliedsnummer);
+    }
+
+    public MemberChorkleidungDto getChorkleidung(String mitgliedsnummer) {
+        return memberRepository.findChorkleidungByMitgliedsnummer(mitgliedsnummer)
+                .orElseThrow(() -> new NotFoundException("Chorkleidung nicht gefunden für Mitglied " + mitgliedsnummer));
+    }
+
+    public MemberChorkleidungDto updateChorkleidung(String mitgliedsnummer, UpdateChorkleidungRequest request) {
+
+        int updatedRows = memberRepository.updateChorkleidung(mitgliedsnummer, request);
+
+        if (updatedRows == 0) {
+            throw new NotFoundException("Chorkleidung nicht gefunden für Mitglied " + mitgliedsnummer);
+        }
+
+        return getChorkleidung(mitgliedsnummer);
     }
 }

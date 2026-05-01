@@ -1,9 +1,17 @@
 package de.emc.mitglieder.dto.member;
 
-public record PaginationDto(
-        int page,
-        int pageSize,
-        long totalItems,
-        int totalPages
-) {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class PaginationDto {
+
+    private int page;
+    private int pageSize;
+    private long totalItems;
+    private int totalPages;
+
 }

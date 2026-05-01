@@ -1,19 +1,24 @@
 package de.emc.mitglieder.dto.request;
 
 import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
-public record UpdateMitgliedschaftRequest(
-        LocalDate eintritt,
-        LocalDate austritt,
+@Data
+@NoArgsConstructor
+public class UpdateMitgliedschaftRequest {
 
-        @NotNull(message = "Mitgliederstatus muss angegeben werden")
-        Integer mitgliedsstatusId,
+    private LocalDate eintritt;
+    private LocalDate austritt;
 
-        @NotNull(message = "Stimme muss angegeben werden")
-        Integer stimmeId,
+    @NotNull(message = "Mitgliederstatus muss angegeben werden")
+    private Integer mitgliedsstatusId;
 
-        Boolean kammerchor
-) {
+    @NotNull(message = "Stimme muss angegeben werden")
+    private Integer stimmeId;
+
+    private Boolean kammerchor;
+
 }
