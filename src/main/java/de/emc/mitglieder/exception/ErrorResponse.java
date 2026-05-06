@@ -1,12 +1,20 @@
 package de.emc.mitglieder.exception;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
-public record ErrorResponse(
-        LocalDateTime timestamp,
-        int status,
-        String error,
-        String message,
-        String path
-) {
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ErrorResponse {
+
+    private LocalDateTime timestamp;
+    private int status;
+    private String error;
+    private String message;
+    private String path;
+    private String requestId;
 }

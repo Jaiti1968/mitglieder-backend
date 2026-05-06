@@ -1,17 +1,21 @@
 package de.emc.mitglieder.exception;
 
+import de.emc.mitglieder.dto.error.ApiErrorResponse;
+import de.emc.mitglieder.dto.error.ValidationErrorDto;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
-
-import java.util.stream.Collectors;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @SuppressWarnings("unused")
 @RestControllerAdvice
@@ -25,12 +29,15 @@ public class GlobalExceptionHandler {
             NotFoundException ex,
             HttpServletRequest request
     ) {
+        log.warn("Nicht gefunden: {} - {}", request.getRequestURI(), ex.getMessage());
+
         return new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.NOT_FOUND.value(),
                 HttpStatus.NOT_FOUND.getReasonPhrase(),
                 ex.getMessage(),
-                request.getRequestURI()
+                request.getRequestURI(),
+                MDC.get("requestId")
         );
     }
 
@@ -40,53 +47,61 @@ public class GlobalExceptionHandler {
             BadRequestException ex,
             HttpServletRequest request
     ) {
-        return new ErrorResponse(
-                LocalDateTime.now(),
-                HttpStatus.BAD_REQUEST.value(),
-                HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                ex.getMessage(),
-                request.getRequestURI()
-        );
-    }
-
-    @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ErrorResponse handleGeneric(
-            Exception ex,
-            HttpServletRequest request
-    ) {
-
-        log.error("Unerwarteter Fehler bei Request {}", request.getRequestURI(), ex);
-        log.warn("Nicht gefunden: {} - {}", request.getRequestURI(), ex.getMessage());
         log.warn("Ungültige Anfrage: {} - {}", request.getRequestURI(), ex.getMessage());
 
         return new ErrorResponse(
                 LocalDateTime.now(),
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
                 ex.getMessage(),
-                request.getRequestURI()
+                request.getRequestURI(),
+                MDC.get("requestId")
         );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleValidationException(
+    public ResponseEntity<ApiErrorResponse> handleValidationException(
             MethodArgumentNotValidException ex,
             HttpServletRequest request
     ) {
-        String message = ex.getBindingResult()
+        List<ValidationErrorDto> validationErrors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
-                .map(org.springframework.validation.FieldError::getDefaultMessage)
-                .collect(Collectors.joining("; "));
+                .map(this::mapFieldError)
+                .toList();
 
-        return new ErrorResponse(
+        ApiErrorResponse response = new ApiErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                message,
-                request.getRequestURI()
+                "Validierungsfehler",
+                request.getRequestURI(),
+                MDC.get("requestId"),
+                validationErrors
+        );
+
+        log.warn("Validierungsfehler bei {}: {}", request.getRequestURI(), validationErrors);
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(response);
+    }
+
+    @ExceptionHandler(DuplicateKeyException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleDuplicateKey(
+            DuplicateKeyException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Duplicate Key bei {} - {}", request.getRequestURI(), ex.getMessage());
+
+        return new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                "Datensatz existiert bereits oder verletzt eine Eindeutigkeitsregel",
+                request.getRequestURI(),
+                MDC.get("requestId")
         );
     }
 
@@ -103,24 +118,33 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
                 "Ungültige Daten oder Verstoß gegen Datenbankregeln",
-                request.getRequestURI()
+                request.getRequestURI(),
+                MDC.get("requestId")
         );
     }
 
-    @ExceptionHandler(DuplicateKeyException.class)
-    @ResponseStatus(HttpStatus.CONFLICT)
-    public ErrorResponse handleDuplicateKey(
-            DuplicateKeyException ex,
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ErrorResponse handleGeneric(
+            Exception ex,
             HttpServletRequest request
     ) {
-        log.warn("Duplicate Key bei {} - {}", request.getRequestURI(), ex.getMessage());
+        log.error("Unerwarteter Fehler bei Request {}", request.getRequestURI(), ex);
 
         return new ErrorResponse(
                 LocalDateTime.now(),
-                HttpStatus.CONFLICT.value(),
-                HttpStatus.CONFLICT.getReasonPhrase(),
-                "Datensatz existiert bereits oder verletzt eine Eindeutigkeitsregel",
-                request.getRequestURI()
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                MDC.get("requestId")
+        );
+    }
+
+    private ValidationErrorDto mapFieldError(FieldError fieldError) {
+        return new ValidationErrorDto(
+                fieldError.getField(),
+                fieldError.getDefaultMessage()
         );
     }
 }

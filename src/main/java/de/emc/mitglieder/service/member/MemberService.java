@@ -10,6 +10,7 @@ import de.emc.mitglieder.dto.request.CreateMemberRequest;
 import org.springframework.transaction.annotation.Transactional;
 import de.emc.mitglieder.exception.BadRequestException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -141,6 +142,8 @@ public class MemberService {
 
     public MemberDatenschutzDto updateDatenschutz(String mitgliedsnummer, UpdateDatenschutzRequest request) {
 
+        validateDatenschutz(request);
+
         int updatedRows = memberRepository.updateDatenschutz(mitgliedsnummer, request);
 
         if (updatedRows == 0) {
@@ -157,6 +160,8 @@ public class MemberService {
 
     public MemberChorkleidungDto updateChorkleidung(String mitgliedsnummer, UpdateChorkleidungRequest request) {
 
+        validateChorkleidung(request);
+
         int updatedRows = memberRepository.updateChorkleidung(mitgliedsnummer, request);
 
         if (updatedRows == 0) {
@@ -164,5 +169,27 @@ public class MemberService {
         }
 
         return getChorkleidung(mitgliedsnummer);
+    }
+
+    private void validateDatenschutz(UpdateDatenschutzRequest request) {
+        if (request.getDatumDatenschutz() != null
+                && request.getDatumDatenschutz().isAfter(LocalDateTime.now())) {
+            throw new BadRequestException("Datum Datenschutz darf nicht in der Zukunft liegen");
+        }
+    }
+
+    private void validateChorkleidung(UpdateChorkleidungRequest request) {
+
+        if (request.getRueckgabeAm() != null
+                && request.getUebergabeAm() != null
+                && request.getRueckgabeAm().isBefore(request.getUebergabeAm())) {
+            throw new BadRequestException("Rückgabe darf nicht vor Übergabe liegen");
+        }
+
+        if (request.getSommerkleidungRueckgabe() != null
+                && request.getSommerkleidungErhalten() != null
+                && request.getSommerkleidungRueckgabe().isBefore(request.getSommerkleidungErhalten())) {
+            throw new BadRequestException("Sommerkleidung-Rückgabe darf nicht vor Erhalt liegen");
+        }
     }
 }
