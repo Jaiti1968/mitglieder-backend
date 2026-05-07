@@ -87,6 +87,30 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
+    @ExceptionHandler(BusinessValidationException.class)
+    public ResponseEntity<ApiErrorResponse> handleBusinessValidationException(
+            BusinessValidationException ex,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                "Validierungsfehler",
+                request.getRequestURI(),
+                MDC.get("requestId"),
+                ex.getValidationErrors()
+        );
+
+        log.warn("Fachlicher Validierungsfehler bei {}: {}",
+                request.getRequestURI(),
+                ex.getValidationErrors());
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(response);
+    }
+
     @ExceptionHandler(DuplicateKeyException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ErrorResponse handleDuplicateKey(

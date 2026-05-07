@@ -2,6 +2,7 @@ package de.emc.mitglieder.constant;
 
 public final class MemberDefaults {
 
+    public static final boolean DEFAULT_PERSON_FIRMA = false;
     public static final String DEFAULT_ANREDE = "Herr";
     public static final String DEFAULT_AKADEMISCHER_TITEL = "";
     public static final int DEFAULT_MITGLIEDSSTATUS_ID = 4;

@@ -2,6 +2,7 @@ package de.emc.mitglieder.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -10,6 +11,9 @@ import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 public class UpdateStammdatenRequest {
+
+    @NotNull(message = "Person/Firma muss angegeben werden")
+    private Boolean personFirma;
 
     @Size(max = 50, message = "Anrede darf maximal 50 Zeichen haben")
     private String anrede;

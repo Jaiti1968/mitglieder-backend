@@ -11,6 +11,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class StammdatenDto {
 
+    private Boolean personFirma;
     private String anrede;
     private String akademischerTitel;
     private String vorname;

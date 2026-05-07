@@ -2,6 +2,8 @@ package de.emc.mitglieder.service.member;
 
 import de.emc.mitglieder.dto.member.*;
 import de.emc.mitglieder.dto.request.*;
+import de.emc.mitglieder.dto.error.ValidationErrorDto;
+import de.emc.mitglieder.exception.BusinessValidationException;
 import de.emc.mitglieder.exception.NotFoundException;
 import de.emc.mitglieder.repository.LookupRepository;
 import de.emc.mitglieder.repository.member.MemberRepository;
@@ -64,6 +66,8 @@ public class MemberService {
     }
 
     public MemberDetailDto updateStammdaten(String mitgliedsnummer, UpdateStammdatenRequest request) {
+        validateStammdatenForUpdate(request);
+
         memberRepository.updateStammdaten(mitgliedsnummer, request);
 
         return memberRepository.findMemberById(mitgliedsnummer);
@@ -103,6 +107,7 @@ public class MemberService {
     @Transactional
     public MemberDetailDto createMember(CreateMemberRequest request) {
 
+        validateStammdatenForCreate(request.getStammdaten());
         validateMitgliedschaft(request.getMitgliedschaft());
 
         String currentNumber = memberRepository.getCurrentMitgliedsnummerForUpdate();
@@ -119,6 +124,50 @@ public class MemberService {
         return memberRepository.findMemberById(currentNumber);
     }
 
+    private void validateStammdatenForCreate(StammdatenDto s) {
+        if (s == null) {
+            throw new BadRequestException("Stammdaten müssen angegeben werden");
+        }
+
+        boolean personFirma = s.getPersonFirma() != null
+                ? s.getPersonFirma()
+                : false;
+
+        validateStammdatenFields(personFirma, s.getVorname(), s.getNachname());
+    }
+
+    private void validateStammdatenForUpdate(UpdateStammdatenRequest r) {
+        if (r == null) {
+            throw new BadRequestException("Stammdaten müssen angegeben werden");
+        }
+
+        validateStammdatenFields(r.getPersonFirma(), r.getVorname(), r.getNachname());
+    }
+
+    private void validateStammdatenFields(Boolean personFirma, String vorname, String nachname) {
+        if (personFirma == null) {
+            throwValidationError("personFirma", "Person/Firma muss angegeben werden");
+        }
+
+        if (isBlank(nachname)) {
+            throwValidationError("nachname", "Nachname/Firmenname darf nicht leer sein");
+        }
+
+        if (!personFirma && isBlank(vorname)) {
+            throwValidationError("vorname", "Vorname darf bei Personen nicht leer sein");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private void throwValidationError(String field, String message) {
+        throw new BusinessValidationException(List.of(
+                new ValidationErrorDto(field, message)
+        ));
+    }
+
     private void validateMitgliedschaft(MitgliedschaftDto m) {
         if (m == null) {
             return;
@@ -126,12 +175,12 @@ public class MemberService {
 
         if (m.getMitgliedsstatusId() != null &&
                 !lookupRepository.existsMemberStatus(m.getMitgliedsstatusId())) {
-            throw new BadRequestException("Ungültiger Mitgliederstatus");
+            throwValidationError("mitgliedsstatusId", "Ungültiger Mitgliederstatus");
         }
 
         if (m.getStimmeId() != null &&
                 !lookupRepository.existsVoice(m.getStimmeId())) {
-            throw new BadRequestException("Ungültige Stimme");
+            throwValidationError("stimmeId", "Ungültige Stimme");
         }
     }
 
@@ -174,7 +223,10 @@ public class MemberService {
     private void validateDatenschutz(UpdateDatenschutzRequest request) {
         if (request.getDatumDatenschutz() != null
                 && request.getDatumDatenschutz().isAfter(LocalDateTime.now())) {
-            throw new BadRequestException("Datum Datenschutz darf nicht in der Zukunft liegen");
+            throwValidationError(
+                    "datumDatenschutz",
+                    "Datum Datenschutz darf nicht in der Zukunft liegen"
+            );
         }
     }
 
@@ -183,13 +235,19 @@ public class MemberService {
         if (request.getRueckgabeAm() != null
                 && request.getUebergabeAm() != null
                 && request.getRueckgabeAm().isBefore(request.getUebergabeAm())) {
-            throw new BadRequestException("Rückgabe darf nicht vor Übergabe liegen");
+            throwValidationError(
+                    "rueckgabeAm",
+                    "Rückgabe darf nicht vor Übergabe liegen"
+                    );
         }
 
         if (request.getSommerkleidungRueckgabe() != null
                 && request.getSommerkleidungErhalten() != null
                 && request.getSommerkleidungRueckgabe().isBefore(request.getSommerkleidungErhalten())) {
-            throw new BadRequestException("Sommerkleidung-Rückgabe darf nicht vor Erhalt liegen");
+            throwValidationError(
+                    "sommerkleidungRueckgabe",
+                    "Sommerkleidung-Rückgabe darf nicht vor Erhalt liegen"
+            );
         }
     }
 }

@@ -165,6 +165,7 @@ public class MemberRepository {
         String sql = """
                 SELECT
                     m.Mitgliedsnummer,
+                    m.PersonFirma,
                     m.Anrede,
                     m.AkademischerTitel,
                     m.Vorname,
@@ -224,6 +225,7 @@ public class MemberRepository {
         String sql = """
             UPDATE tblMitglieder
             SET
+                PersonFirma = ?,
                 Anrede = ?,
                 AkademischerTitel = ?,
                 Vorname = ?,
@@ -237,6 +239,7 @@ public class MemberRepository {
 
         int updatedRows = jdbcTemplate.update(
                 sql,
+                r.getPersonFirma(),
                 r.getAnrede(),
                 r.getAkademischerTitel(),
                 r.getVorname(),
@@ -344,6 +347,7 @@ public class MemberRepository {
         String sql = """
         INSERT INTO tblMitglieder (
             Mitgliedsnummer,
+            PersonFirma,
             Anrede,
             AkademischerTitel,
             Vorname,
@@ -353,12 +357,13 @@ public class MemberRepository {
             StrasseHausNr,
             Geburtsdatum
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """;
 
         jdbcTemplate.update(
                 sql,
                 id,
+                s != null && s.getPersonFirma() != null ? s.getPersonFirma() : MemberDefaults.DEFAULT_PERSON_FIRMA,
                 s != null && s.getAnrede() != null ? s.getAnrede() : MemberDefaults.DEFAULT_ANREDE,
                 s != null && s.getAkademischerTitel() != null ? s.getAkademischerTitel() : MemberDefaults.DEFAULT_AKADEMISCHER_TITEL,
                 s != null ? s.getVorname() : null,

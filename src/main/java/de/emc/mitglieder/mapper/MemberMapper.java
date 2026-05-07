@@ -21,6 +21,7 @@ public final class MemberMapper {
 
     private static StammdatenDto mapStammdaten(ResultSet rs) throws SQLException {
         return new StammdatenDto(
+                rs.getBoolean("PersonFirma"),
                 rs.getString("Anrede"),
                 rs.getString("AkademischerTitel"),
                 rs.getString("Vorname"),
