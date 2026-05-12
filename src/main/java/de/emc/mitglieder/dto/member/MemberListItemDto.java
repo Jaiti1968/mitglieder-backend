@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 public class MemberListItemDto {
 
     private String mitgliedsnummer;
+    private Boolean personFirma;
     private String vorname;
     private String nachname;
     private String ort;

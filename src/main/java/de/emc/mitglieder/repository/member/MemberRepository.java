@@ -37,6 +37,7 @@ public class MemberRepository {
         StringBuilder sql = new StringBuilder("""
                 SELECT
                     m.Mitgliedsnummer,
+                    m.PersonFirma,
                     m.Vorname,
                     m.Nachname,
                     m.Ort,
@@ -99,6 +100,7 @@ public class MemberRepository {
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) ->
                         new MemberListItemDto(
                                 rs.getString("Mitgliedsnummer"),
+                                rs.getBoolean("PersonFirma"),
                                 rs.getString("Vorname"),
                                 rs.getString("Nachname"),
                                 rs.getString("Ort"),

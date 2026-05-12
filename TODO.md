@@ -5,3 +5,4 @@
 [ ] Integration Tests
 [ ] Docker Healthcheck
 [ ] Flyway/Liquibase
+[ ] Backend DTOs auf LocalDate harmonisieren
