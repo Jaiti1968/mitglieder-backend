@@ -1,34 +1,36 @@
-# EMC Mitgliederverwaltung – Backend
+# EMC Mitgliederverwaltung -- Backend
 
-Spring Boot Backend für die Verwaltung der Mitgliedsdaten des EMC Männerchors.
+Spring Boot Backend für die Verwaltung der Mitgliedsdaten des EMC
+Männerchors.
 
-Das Backend stellt eine REST-API bereit, kapselt den Zugriff auf MariaDB und läuft als Docker-Container auf dem NAS DH2300. Das Frontend wird separat als React-Anwendung umgesetzt.
+Das Backend stellt eine REST-API bereit, kapselt den Zugriff auf MariaDB
+und läuft als Docker-Container auf dem NAS DH2300. Das Frontend wird
+separat als React-Anwendung umgesetzt.
 
----
+------------------------------------------------------------------------
 
 # Technologien
 
-- Java 21
-- Spring Boot 3
-- Spring Web REST
-- Spring JDBC (`JdbcTemplate`)
-- MariaDB
-- Maven
-- Docker
-- Portainer
-- Lombok
-- Jakarta Validation
+-   Java 21
+-   Spring Boot 3
+-   Spring Web
+-   Spring JDBC (`JdbcTemplate`)
+-   MariaDB
+-   Maven
+-   Docker
+-   Portainer
+-   Lombok
+-   Jakarta Validation
 
----
+------------------------------------------------------------------------
 
 # Architektur
 
-Das Backend folgt einer klassischen Schichtenarchitektur:
-
-```text
+``` text
 Controller
 → Service
 → Repository
+→ Mapper
 → MariaDB
 ```
 
@@ -36,43 +38,85 @@ Controller
 
 ### Controller
 
-- REST-Endpunkte
-- HTTP Request/Response
-- Übergabe der Request DTOs
-- Response-Serialisierung
+-   REST-Endpunkte
+-   HTTP Request/Response
+-   Request DTO Binding
+-   Response-Serialisierung
 
 ### Service
 
-- Geschäftslogik
-- fachliche Validierung
-- Transaktionen
-- Fehlerbehandlung
+-   Geschäftslogik
+-   fachliche Validierung
+-   Transaktionen
+-   Fehlerbehandlung
 
 ### Repository
 
-- SQL-Zugriffe mit `JdbcTemplate`
-- Mapping von ResultSets
-- Datenbankoperationen
+-   SQL-Zugriffe mit `JdbcTemplate`
+-   Datenbankoperationen
+
+### Mapper
+
+-   Mapping von `ResultSet` auf DTOs
+-   zentrale Datentyp-Konvertierung
 
 ### DTOs
 
-#### dto.member
+-   `dto.member` → Response-/Fachmodelle
+-   `dto.request` → Request DTOs
+-   `dto.error` → Fehlerantworten
 
-Response- und Fachmodelle
+------------------------------------------------------------------------
 
-#### dto.request
+# Fachliches Datumsmodell
 
-Request DTOs
+## Grundsatz
 
-#### dto.error
+**Das API-Fachmodell gewinnt über das technische Datenbankmodell.**
 
-Fehler-DTOs und Validierungsfehler
+Auch wenn MariaDB-Spalten technisch als `datetime` definiert sind,
+verwendet die API für fachliche Datumsfelder konsequent:
 
----
+``` text
+LocalDate
+```
+
+JSON-Format:
+
+``` json
+"2026-05-12"
+```
+
+Nicht verwendet für fachliche Datumsfelder:
+
+``` text
+LocalDateTime
+```
+
+Technische Zeitstempel (Fehlerzeitpunkte, Logging) verwenden weiterhin:
+
+``` text
+LocalDateTime
+```
+
+## Betroffene Fachbereiche
+
+-   Stammdaten (`geburtsdatum`)
+-   Mitgliedschaft (`eintritt`, `austritt`)
+-   Datenschutz (`datumDatenschutz`)
+-   Chorkleidung
+    -   `uebergabeAm`
+    -   `datumAnteil`
+    -   `rueckgabeAm`
+    -   `kaufdatum`
+    -   `sommerkleidungErhalten`
+    -   `sommerkleidungRueckgabe`
+
+------------------------------------------------------------------------
 
 # Projektstruktur
 
-```text
+``` text
 src/main/java/de/emc/mitglieder
 ├── constant
 ├── controller
@@ -88,194 +132,133 @@ src/main/java/de/emc/mitglieder
 └── validation
 ```
 
----
+------------------------------------------------------------------------
 
 # Datenbank
 
-MariaDB läuft auf dem NAS DH2300.
-
 ## Konfiguration
 
-```properties
+``` properties
 spring.datasource.url=${DB_URL}
 spring.datasource.username=${DB_USERNAME}
 spring.datasource.password=${DB_PASSWORD}
 spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
 ```
 
-## Beispiel Environment Variables
+## Beispiel ENV
 
-```text
+``` text
 DB_URL=jdbc:mariadb://192.168.xxx.xxx:3306/emc_mitglieder_dev
 DB_USERNAME=emc_mitglieder_rw
 DB_PASSWORD=********
 ```
 
----
+## Tabellen
 
-# Wichtige Tabellen
+### Kern
 
-## Kernbereiche
+-   `tblMitglieder`
+-   `tblKontaktdaten`
+-   `tblMitgliedschaft`
 
-- tblMitglieder
-- tblKontaktdaten
-- tblMitgliedschaft
+### Erweiterungen
 
-## Erweiterungsbereiche
+-   `tblDatenschutz`
+-   `tblChorkleidung`
 
-- tblDatenschutz
-- tblChorkleidung
+### Lookups
 
-## Lookup-Tabellen
+-   `tblMitgliederstatus_FT`
+-   `tblStimme_FT`
+-   `tblAllgemein_FT`
 
-- tblMitgliederstatus_FT
-- tblStimme_FT
-- tblAllgemein_FT
+------------------------------------------------------------------------
 
----
+# Mitgliedsnummernvergabe
 
-# Mitgliedsnummer
+Transaktionssicher über:
 
-Die Mitgliedsnummer wird transaktionssicher im Backend erzeugt.
-
-## Ablauf
-
-1. Lesen von `tblAllgemein_FT.neueMitgliedsnummer`
-2. Reservierung über `SELECT ... FOR UPDATE`
-3. Vergabe an neues Mitglied
-4. Hochzählen der Nummer
-5. Speicherung der neuen Nummer
-
-## SQL
-
-```sql
+``` sql
 SELECT neueMitgliedsnummer
 FROM tblAllgemein_FT
 FOR UPDATE
 ```
 
----
+Ablauf: 1. Nummer lesen 2. sperren 3. vergeben 4. inkrementieren 5.
+speichern
+
+------------------------------------------------------------------------
 
 # REST API
 
-# Lookups
+## Lookups
 
-```http
+``` http
 GET /api/lookups/member-status
 GET /api/lookups/voices
 ```
 
----
+## Mitgliederliste
 
-# Mitgliederliste
-
-```http
+``` http
 GET /api/members
 ```
 
-## Query Parameter
+Query Parameter:
 
-| Parameter | Beschreibung |
-|---|---|
-| search | Freitextsuche |
-| statusId | Mitgliederstatus |
-| stimmeId | Stimme |
-| page | Seitennummer |
-| pageSize | Anzahl Datensätze |
+  Parameter   Beschreibung
+  ----------- ---------------------------------
+  search      Freitextsuche
+  statusId    Mehrfachfilter Mitgliederstatus
+  stimmeId    Mehrfachfilter Stimme
+  page        Seite
+  pageSize    Seitengröße
 
-## Beispiele
+Beispiele:
 
-```http
+``` http
 GET /api/members?page=1&pageSize=20
 GET /api/members?search=wolf
 GET /api/members?statusId=1&statusId=4
 GET /api/members?stimmeId=1&stimmeId=3
 ```
 
----
+## Mitglied Detail
 
-# Mitglied Detail
-
-```http
+``` http
 GET /api/members/{mitgliedsnummer}
 ```
 
-## Beispielantwort
+## Mitglied anlegen
 
-```json
-{
-  "mitgliedsnummer": "N1139",
-  "stammdaten": {},
-  "kontakt": {},
-  "mitgliedschaft": {}
-}
-```
-
----
-
-# Mitglied anlegen
-
-```http
+``` http
 POST /api/members
 ```
 
-## Automatisch angelegte Datensätze
+Automatisch erzeugte Datensätze: - `tblMitglieder` - `tblKontaktdaten` -
+`tblMitgliedschaft` - `tblDatenschutz` - `tblChorkleidung`
 
-Beim POST werden automatisch Datensätze erzeugt in:
+------------------------------------------------------------------------
 
-- tblMitglieder
-- tblKontaktdaten
-- tblMitgliedschaft
-- tblDatenschutz
-- tblChorkleidung
+## Aktualisierung
 
-Datenschutz und Chorkleidung werden initial mit Default-Werten angelegt.
-
----
-
-# Stammdaten ändern
-
-```http
+``` http
 PUT /api/members/{mitgliedsnummer}/stammdaten
-```
-
----
-
-# Kontakt ändern
-
-```http
 PUT /api/members/{mitgliedsnummer}/kontakt
-```
-
----
-
-# Mitgliedschaft ändern
-
-```http
 PUT /api/members/{mitgliedsnummer}/mitgliedschaft
-```
-
----
-
-# Datenschutz
-
-## Datenschutz lesen
-
-```http
-GET /api/members/{mitgliedsnummer}/datenschutz
-```
-
-## Datenschutz ändern
-
-```http
 PUT /api/members/{mitgliedsnummer}/datenschutz
+PUT /api/members/{mitgliedsnummer}/chorkleidung
 ```
 
-## Beispielrequest
+------------------------------------------------------------------------
 
-```json
+# API Beispiele
+
+## Datenschutz Request
+
+``` json
 {
-  "datumDatenschutz": "2026-05-01T18:00:00",
+  "datumDatenschutz": "2026-05-01",
   "datenschutzNr14": true,
   "datenschutzNr15": true,
   "datenschutzNr16": false,
@@ -284,237 +267,166 @@ PUT /api/members/{mitgliedsnummer}/datenschutz
 }
 ```
 
----
+## Chorkleidung Request
 
-# Chorkleidung
-
-## Chorkleidung lesen
-
-```http
-GET /api/members/{mitgliedsnummer}/chorkleidung
-```
-
-## Chorkleidung ändern
-
-```http
-PUT /api/members/{mitgliedsnummer}/chorkleidung
-```
-
-## Beispielrequest
-
-```json
+``` json
 {
   "ehemaligeStimme": "Tenor",
-  "neubeschaffung": true,
+  "uebergabeAm": "2026-05-01",
+  "datumAnteil": "2026-05-03",
   "barzahlung": true,
+  "kaufdatum": "2026-05-05",
   "kaufpreis": 199.99,
-  "sommerkleidung": true
+  "sommerkleidungErhalten": "2026-05-10"
 }
 ```
 
----
+------------------------------------------------------------------------
 
 # Validierung
 
-## DTO-Validierung
+## DTO Validierung
 
-- Pflichtfelder
-- maximale Feldlängen
-- E-Mail-Validierung
-- numerische Bereiche
+-   Pflichtfelder
+-   Feldlängen
+-   E-Mail Format
+-   numerische Wertebereiche
 
 ## Fachliche Validierung
 
-- Mitgliederstatus muss existieren
-- Stimme muss existieren
-- Rückgabe darf nicht vor Übergabe liegen
+-   Lookup-Werte müssen existieren
+-   Datumslogik
+-   Zukunftsprüfungen, wo fachlich relevant
 
-## Datenbankvalidierung
+## Datenbankregeln
 
-Zusätzliche Absicherung über:
+-   Foreign Keys
+-   NOT NULL
+-   UNIQUE
 
-- Foreign Keys
-- UNIQUE
-- NOT NULL
-- Constraints
-
----
+------------------------------------------------------------------------
 
 # Fehlerhandling
 
-## Standard ErrorResponse
+Standard Error Response:
 
-```json
+``` json
 {
-  "timestamp": "2026-05-01T19:12:44",
+  "timestamp": "2026-05-12T11:30:00",
   "status": 404,
   "error": "Not Found",
   "message": "Mitglied nicht gefunden",
   "path": "/api/members/N9999",
-  "requestId": "c91f9f09-9d31-4c42-b17d-3c8a5fd26a18"
+  "requestId": "uuid"
 }
 ```
 
-## Validierungsfehler
+Statuscodes: - 400 Bad Request - 404 Not Found - 409 Conflict - 500
+Internal Server Error
 
-```json
-{
-  "timestamp": "2026-05-01T19:12:44",
-  "status": 400,
-  "error": "Bad Request",
-  "message": "Validierungsfehler",
-  "path": "/api/members/N1139/chorkleidung",
-  "requestId": "c91f9f09-9d31-4c42-b17d-3c8a5fd26a18",
-  "validationErrors": [
-    {
-      "field": "kaufpreis",
-      "message": "Kaufpreis darf nicht negativ sein"
-    }
-  ]
-}
-```
-
-## Statuscodes
-
-| Status | Bedeutung |
-|---|---|
-| 400 Bad Request | Validierungsfehler |
-| 404 Not Found | Datensatz nicht gefunden |
-| 409 Conflict | Duplicate Key |
-| 500 Internal Server Error | Unerwarteter Fehler |
-
----
+------------------------------------------------------------------------
 
 # Logging
 
-## Eigenschaften
+-   strukturierte Logs
+-   Request-ID Korrelation
+-   WARN für fachliche Fehler
+-   ERROR für technische Fehler
 
-- strukturierte Logs
-- Request-ID-Korrelation
-- WARN für fachliche Fehler
-- ERROR für technische Fehler
+Response Header:
 
-## Request-ID
-
-Jede Anfrage erhält:
-
-```text
+``` text
 X-Request-Id
 ```
 
-Die ID wird:
-
-- im Response Header zurückgegeben
-- im ErrorResponse enthalten
-- im Log ausgegeben
-
----
+------------------------------------------------------------------------
 
 # Docker Deployment
 
-## DEV / PROD
-
-Das Backend läuft als:
-
-- DEV Container
-- PROD Container
-
-auf dem NAS DH2300.
-
 ## Build
 
-```bash
+``` bash
 mvn clean package
-```
-
-## Docker Build
-
-```bash
 docker build -t emc-backend .
 ```
 
-## Docker Run
+## Run
 
-```bash
+``` bash
 docker run -d -p 8080:8080 emc-backend
 ```
 
----
+## Deployment Modell
+
+-   DEV Image (`:dev`)
+-   PROD Image (`:prod`)
+
+NAS Zielplattform: UGREEN NAS DH2300
+
+------------------------------------------------------------------------
 
 # Test
 
-Empfohlenes Werkzeug:
+Empfohlen: Postman
 
-- Postman
+Wichtige Endpunkte:
 
-## Wichtige Tests
-
-```http
+``` http
 GET /api/lookups/member-status
 GET /api/lookups/voices
-
 GET /api/members
 GET /api/members/{mitgliedsnummer}
-
 POST /api/members
-
 PUT /api/members/{mitgliedsnummer}/stammdaten
 PUT /api/members/{mitgliedsnummer}/kontakt
 PUT /api/members/{mitgliedsnummer}/mitgliedschaft
-
 PUT /api/members/{mitgliedsnummer}/datenschutz
 PUT /api/members/{mitgliedsnummer}/chorkleidung
 ```
 
----
+Datums-Tests immer mit:
 
-# Versionierung
-
-## Aktuelle Version
-
-```text
-1.1.0-SNAPSHOT
+``` json
+"2026-05-12"
 ```
 
-## Branching
+nicht:
 
-- master → stabile Releases
-- feature/... → Featureentwicklung
+``` json
+"2026-05-12T00:00:00"
+```
 
----
+------------------------------------------------------------------------
 
-# Aktueller Status
+# Projektstatus
 
-| Bereich | Status |
-|---|---|
-| Lookup-Endpunkte | fertig |
-| Mitgliederliste | fertig |
-| Suche | fertig |
-| Pagination | fertig |
-| Multi-Select-Filter | fertig |
-| Mitglied Detail | fertig |
-| Mitglied anlegen | fertig |
-| Stammdaten ändern | fertig |
-| Kontakt ändern | fertig |
-| Mitgliedschaft ändern | fertig |
-| Datenschutz | fertig |
-| Chorkleidung | fertig |
-| DTO-Validierung | fertig |
-| Zentrales Fehlerhandling | fertig |
-| Request-ID Logging | fertig |
-| Docker DEV/PROD | fertig |
-| Login / Auth | offen |
-| Rollen / Rechte | offen |
+  Bereich              Status
+  -------------------- --------
+-   Lookup APIs          fertig
+-   Mitgliederliste      fertig
+-   Suche                fertig
+-   Pagination           fertig
+-   Detailansicht        fertig
+-   POST Mitglied        fertig
+-   PUT Stammdaten       fertig
+-   PUT Kontakt          fertig
+-   PUT Mitgliedschaft   fertig
+-   Datenschutz          fertig
+-   Chorkleidung         fertig
+-   Fehlerhandling       fertig
+-   Request-ID Logging   fertig
+-   Docker DEV/PROD      fertig
+-   Login/Auth           offen
+-   Rollen/Rechte        offen
 
----
+------------------------------------------------------------------------
 
-# Nicht Bestandteil des MVP
+# Nicht im MVP
 
-- Ehrungen
-- Funktionen
-- Verteiler
-- Berichte
-- Benutzerverwaltung
-- Rechte je Datenfeld
-- Historisierung
-- Mailversand
+-   Ehrungen
+-   Funktionen
+-   Verteiler
+-   Historisierung
+-   Berichte
+-   Benutzerverwaltung
+-   Mailversand

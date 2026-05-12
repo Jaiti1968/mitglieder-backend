@@ -12,7 +12,7 @@ import de.emc.mitglieder.dto.request.CreateMemberRequest;
 import org.springframework.transaction.annotation.Transactional;
 import de.emc.mitglieder.exception.BadRequestException;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -222,7 +222,7 @@ public class MemberService {
 
     private void validateDatenschutz(UpdateDatenschutzRequest request) {
         if (request.getDatumDatenschutz() != null
-                && request.getDatumDatenschutz().isAfter(LocalDateTime.now())) {
+                && request.getDatumDatenschutz().isAfter(LocalDate.now())) {
             throwValidationError(
                     "datumDatenschutz",
                     "Datum Datenschutz darf nicht in der Zukunft liegen"

@@ -3,13 +3,13 @@ package de.emc.mitglieder.dto.request;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
 public class UpdateDatenschutzRequest {
 
-    private LocalDateTime datumDatenschutz;
+    private LocalDate datumDatenschutz;
 
     private Boolean datenschutzNr14;
     private Boolean datenschutzNr15;

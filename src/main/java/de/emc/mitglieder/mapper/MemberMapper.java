@@ -4,6 +4,7 @@ import de.emc.mitglieder.dto.member.*;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 
 public final class MemberMapper {
 
@@ -56,18 +57,16 @@ public final class MemberMapper {
         );
     }
 
-    private static java.time.LocalDate toLocalDate(ResultSet rs, String columnName) throws SQLException {
-        return rs.getObject(columnName) != null
-                ? rs.getTimestamp(columnName).toLocalDateTime().toLocalDate()
+    private static LocalDate toLocalDate(ResultSet rs, String columnName) throws SQLException {
+        return rs.getTimestamp(columnName) != null
+                ? rs.getDate(columnName).toLocalDate()
                 : null;
     }
 
     public static MemberDatenschutzDto mapDatenschutz(ResultSet rs) throws SQLException {
         return new MemberDatenschutzDto(
                 rs.getString("Mitgliedsnummer"),
-                rs.getTimestamp("DatumDatenschutz") != null
-                        ? rs.getTimestamp("DatumDatenschutz").toLocalDateTime()
-                        : null,
+                toLocalDate(rs, "DatumDatenschutz"),
                 rs.getBoolean("DatenschutzNr14"),
                 rs.getBoolean("DatenschutzNr15"),
                 rs.getBoolean("DatenschutzNr16"),
@@ -79,32 +78,20 @@ public final class MemberMapper {
     public static MemberChorkleidungDto mapChorkleidung(ResultSet rs) throws SQLException {
         return new MemberChorkleidungDto(
                 rs.getString("Mitgliedsnummer"),
-                rs.getString("ehemaligeStimme"),
-                rs.getTimestamp("UebergabeAm") != null
-                        ? rs.getTimestamp("UebergabeAm").toLocalDateTime()
-                        : null,
+                rs.getString("EhemaligeStimme"),
+                toLocalDate(rs, "UebergabeAm"),
                 rs.getString("BemerkungUebergabe"),
                 rs.getBoolean("Neubeschaffung"),
-                rs.getTimestamp("DatumAnteil") != null
-                        ? rs.getTimestamp("DatumAnteil").toLocalDateTime()
-                        : null,
+                toLocalDate(rs, "DatumAnteil"),
                 rs.getBoolean("Barzahlung"),
                 rs.getString("Bearbeitungsstand"),
-                rs.getTimestamp("RueckgabeAm") != null
-                        ? rs.getTimestamp("RueckgabeAm").toLocalDateTime()
-                        : null,
+                toLocalDate(rs, "RueckgabeAm"),
                 rs.getString("BemerkungRueckgabe"),
-                rs.getTimestamp("Kaufdatum") != null
-                        ? rs.getTimestamp("Kaufdatum").toLocalDateTime()
-                        : null,
+                toLocalDate(rs, "Kaufdatum"),
                 rs.getBigDecimal("Kaufpreis"),
                 rs.getBoolean("Sommerkleidung"),
-                rs.getTimestamp("SommerkleidungErhalten") != null
-                        ? rs.getTimestamp("SommerkleidungErhalten").toLocalDateTime()
-                        : null,
-                rs.getTimestamp("SommerkleidungRueckgabe") != null
-                        ? rs.getTimestamp("SommerkleidungRueckgabe").toLocalDateTime()
-                        : null
+                toLocalDate(rs, "SommerkleidungErhalten"),
+                toLocalDate(rs, "SommerkleidungRueckgabe")
         );
     }
 }

@@ -5,7 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -15,24 +15,24 @@ public class MemberChorkleidungDto {
     private String mitgliedsnummer;
 
     private String ehemaligeStimme;
-    private LocalDateTime uebergabeAm;
+    private LocalDate uebergabeAm;
     private String bemerkungUebergabe;
 
     private boolean neubeschaffung;
-    private LocalDateTime datumAnteil;
+    private LocalDate datumAnteil;
     private boolean barzahlung;
 
     private String bearbeitungsstand;
 
-    private LocalDateTime rueckgabeAm;
+    private LocalDate rueckgabeAm;
     private String bemerkungRueckgabe;
 
-    private LocalDateTime kaufdatum;
+    private LocalDate kaufdatum;
     private BigDecimal kaufpreis;
 
     private boolean sommerkleidung;
-    private LocalDateTime sommerkleidungErhalten;
-    private LocalDateTime sommerkleidungRueckgabe;
+    private LocalDate sommerkleidungErhalten;
+    private LocalDate sommerkleidungRueckgabe;
 
     // Getter / Setter
 }

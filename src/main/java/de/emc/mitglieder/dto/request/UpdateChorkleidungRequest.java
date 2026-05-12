@@ -6,7 +6,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+
 
 @Data
 public class UpdateChorkleidungRequest {
@@ -14,23 +15,23 @@ public class UpdateChorkleidungRequest {
     @Size(max = 50)
     private String ehemaligeStimme;
 
-    private LocalDateTime uebergabeAm;
+    private LocalDate uebergabeAm;
 
     private String bemerkungUebergabe;
 
     private Boolean neubeschaffung;
 
-    private LocalDateTime datumAnteil;
+    private LocalDate datumAnteil;
 
     private Boolean barzahlung;
 
     private String bearbeitungsstand;
 
-    private LocalDateTime rueckgabeAm;
+    private LocalDate rueckgabeAm;
 
     private String bemerkungRueckgabe;
 
-    private LocalDateTime kaufdatum;
+    private LocalDate kaufdatum;
 
     @DecimalMin(value = "0.00", message = "Kaufpreis darf nicht negativ sein")
     @Digits(integer = 8, fraction = 2, message = "Kaufpreis hat falsches Format")
@@ -38,7 +39,7 @@ public class UpdateChorkleidungRequest {
 
     private Boolean sommerkleidung;
 
-    private LocalDateTime sommerkleidungErhalten;
+    private LocalDate sommerkleidungErhalten;
 
-    private LocalDateTime sommerkleidungRueckgabe;
+    private LocalDate sommerkleidungRueckgabe;
 }
