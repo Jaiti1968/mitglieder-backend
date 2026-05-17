@@ -173,6 +173,15 @@ public class MemberService {
             return;
         }
 
+        if (m.getAustritt() != null
+                && m.getEintritt() != null
+                && m.getAustritt().isBefore(m.getEintritt())) {
+            throwValidationError(
+                    "austritt",
+                    "Austritt darf nicht vor Eintritt liegen"
+            );
+        }
+
         if (m.getMitgliedsstatusId() != null &&
                 !lookupRepository.existsMemberStatus(m.getMitgliedsstatusId())) {
             throwValidationError("mitgliedsstatusId", "Ungültiger Mitgliederstatus");
