@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.authentication.BadCredentialsException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -142,6 +143,24 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
                 "Ungültige Daten oder Verstoß gegen Datenbankregeln",
+                request.getRequestURI(),
+                MDC.get("requestId")
+        );
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleBadCredentials(
+            BadCredentialsException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Ungültiger Login-Versuch bei {}", request.getRequestURI());
+
+        return new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.UNAUTHORIZED.value(),
+                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
+                "Ungültiger Benutzername oder Passwort",
                 request.getRequestURI(),
                 MDC.get("requestId")
         );
