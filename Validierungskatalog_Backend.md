@@ -701,13 +701,13 @@ Neue fachliche Feldvalidierungen:
 
 bevorzugt:
 
-```java
+```text
 BusinessValidationException
 ```
 
 Pattern:
 
-```java
+```text
 throwValidationError("feldname", "Fehlermeldung");
 ```
 
