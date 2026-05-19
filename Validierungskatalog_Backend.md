@@ -1,33 +1,50 @@
 # Validierungskatalog Backend – EMC Mitgliederverwaltung
 
-Stand: Backend-Version `1.1.0-SNAPSHOT`  
-Kontext: Spring Boot Backend `mitglieder-backend` für EMC Mitgliederverwaltung
+Stand: Backend Phase 3c  
+Kontext: Spring Boot Backend `mitglieder-backend`
 
 ---
 
-## 1. Zweck dieses Dokuments
+# 1. Zweck dieses Dokuments
 
-Dieser Katalog dokumentiert die aktuell bekannten Backend-Validierungen und Fehlermeldungen der REST-API.
+Dieses Dokument beschreibt die aktuell implementierten Backend-Validierungen, Fehlerformate und das erwartete API-Fehlerverhalten.
 
-Er dient insbesondere dem Frontend als Grundlage für:
+Zielgruppen:
 
-- feldbezogene Fehleranzeige in Formularen
-- Mapping von `validationErrors[].field` auf Formularfelder
-- einheitliche Behandlung von Backend-Fehlern
-- Postman- und Frontend-Tests
-- spätere Erweiterungen der Formularvalidierung
+- Backend-Entwicklung
+- Frontend-Entwicklung
+- API-Tests (Postman / Integrationstests)
+- Dokumentation
+
+Dieses Dokument beschreibt ausschließlich das Verhalten des Backends.
+
+Nicht Bestandteil:
+
+- Frontend UI Verhalten
+- Formularlogik im Frontend
+- Anzeigeempfehlungen
 
 ---
 
-## 2. Fehlerformate
+# 2. Fehlerformate
 
-### 2.1 Strukturierter Validierungsfehler
+Das Backend verwendet zwei standardisierte Fehlerformate.
 
-Dieses Format wird für Bean-Validation-Fehler und fachliche feldbezogene Service-Validierungen verwendet.
+---
+
+## 2.1 Feldbezogene Validierungsfehler (`ApiErrorResponse`)
+
+Wird verwendet bei:
+
+- Bean Validation
+- fachlicher Feldvalidierung
+- `BusinessValidationException`
+
+Beispiel:
 
 ```json
 {
-  "timestamp": "2026-05-07T09:21:35.3086045",
+  "timestamp": "2026-05-19T10:30:00",
   "status": 400,
   "error": "Bad Request",
   "message": "Validierungsfehler",
@@ -42,16 +59,38 @@ Dieses Format wird für Bean-Validation-Fehler und fachliche feldbezogene Servic
 }
 ```
 
-### 2.2 Allgemeiner Fehler
+Struktur:
 
-Dieses Format wird für nicht feldbezogene Fehler verwendet, z. B. nicht gefundene Datensätze oder technische Fehler.
+| Feld | Typ |
+|------|-----|
+| `timestamp` | `LocalDateTime` |
+| `status` | Integer |
+| `error` | String |
+| `message` | String |
+| `path` | String |
+| `requestId` | String |
+| `validationErrors[]` | Array |
+
+---
+
+## 2.2 Allgemeiner Fehler (`ErrorResponse`)
+
+Wird verwendet bei:
+
+- `NotFoundException`
+- `BadRequestException`
+- `DuplicateKeyException`
+- technische Fehler
+- Security Fehler
+
+Beispiel:
 
 ```json
 {
-  "timestamp": "2026-05-07T09:21:35.3086045",
+  "timestamp": "2026-05-19T10:30:00",
   "status": 404,
   "error": "Not Found",
-  "message": "Mitglied mit Nummer N9999 wurde nicht gefunden.",
+  "message": "Mitglied nicht gefunden",
   "path": "/api/members/N9999",
   "requestId": "6ba04a80-0485-4a2e-91dc-f12d92dacb86"
 }
@@ -59,665 +98,639 @@ Dieses Format wird für nicht feldbezogene Fehler verwendet, z. B. nicht gefunde
 
 ---
 
-## 3. Fehlerquellen
+# 3. HTTP Statuscodes
 
-| Quelle | Beschreibung | Fehlerformat |
-|---|---|---|
-| Bean Validation | Annotationen wie `@NotBlank`, `@NotNull`, `@Size`, `@Email` | `ApiErrorResponse` mit `validationErrors[]` |
-| Service-Validierung | fachliche Regeln im Service | `ApiErrorResponse` mit `validationErrors[]`, sofern feldbezogen |
-| Datenbank | Foreign Keys, NOT NULL, UNIQUE, sonstige DB-Regeln | allgemeiner `ErrorResponse` |
-| NotFoundException | Datensatz nicht gefunden | allgemeiner `ErrorResponse` |
-| DuplicateKeyException | Eindeutigkeitsregel verletzt | allgemeiner `ErrorResponse` |
+| Status | Bedeutung |
+|--------|-----------|
+| `200 OK` | erfolgreicher GET / PUT |
+| `204 No Content` | erfolgreicher POST/PUT ohne Response Body |
+| `400 Bad Request` | Validierungs- oder Fachfehler |
+| `401 Unauthorized` | nicht authentifiziert |
+| `403 Forbidden` | authentifiziert, aber keine Berechtigung |
+| `404 Not Found` | Ressource nicht gefunden |
+| `409 Conflict` | Duplicate Key / Eindeutigkeitsverletzung |
+| `500 Internal Server Error` | unerwarteter technischer Fehler |
 
 ---
 
-## 4. Allgemeine Statuscodes
+# 4. Auth / Security
 
-| HTTP-Status | Bedeutung |
-|---|---|
-| `400 Bad Request` | Validierungsfehler, fachlicher Fehler oder DB-Regelverletzung |
-| `404 Not Found` | Datensatz wurde nicht gefunden |
-| `409 Conflict` | Duplicate Key / UNIQUE-Verstoß |
-| `500 Internal Server Error` | unerwarteter technischer Fehler |
+## 4.1 Login
+
+Endpoint:
+
+```http
+POST /api/auth/login
+```
+
+Request:
+
+```json
+{
+  "username": "admin",
+  "password": "secret"
+}
+```
+
+---
+
+### Erfolgreich
+
+Response:
+
+```http
+200 OK
+```
+
+```json
+{
+  "id": 1,
+  "username": "admin",
+  "role": "ADMIN"
+}
+```
+
+---
+
+### Fehler
+
+Ungültige Anmeldung:
+
+```http
+401 Unauthorized
+```
+
+Response:
+
+```json
+{
+  "message": "Anmeldung nicht möglich."
+}
+```
+
+Bewusst neutralisiert.
+
+Es wird nicht unterschieden zwischen:
+
+- falsches Passwort
+- deaktivierter Benutzer
+- spätere Sperrmechanismen
+
+---
+
+## 4.2 Session erforderlich
+
+Geschützte Endpunkte ohne Session:
+
+```http
+401 Unauthorized
+```
+
+---
+
+## 4.3 Rollenverletzung
+
+Authentifiziert, aber Rolle unzureichend:
+
+```http
+403 Forbidden
+```
+
+Beispiel:
+
+VIEWER auf:
+
+```http
+PUT /api/members/N1001/stammdaten
+```
 
 ---
 
 # 5. Stammdaten
 
-## Endpunkte
+Endpoints:
 
 ```http
 POST /api/members
 PUT /api/members/{mitgliedsnummer}/stammdaten
-GET /api/members/{mitgliedsnummer}
 ```
 
-Die Stammdaten liegen im Objekt:
+---
+
+## Felder
+
+| Feld | Typ |
+|------|-----|
+| `personFirma` | Boolean |
+| `anrede` | String |
+| `akademischerTitel` | String |
+| `vorname` | String |
+| `nachname` | String |
+| `plz` | String |
+| `ort` | String |
+| `strasseHausNr` | String |
+| `geburtsdatum` | LocalDate |
+
+---
+
+## Validierungen
+
+### personFirma
+
+| Regel | Meldung |
+|------|---------|
+| bei Update Pflicht | `Person/Firma muss angegeben werden` |
+
+Bei POST:
+
+Default:
+
+```text
+false
+```
+
+---
+
+### vorname
+
+| Regel | Meldung |
+|------|---------|
+| max 50 Zeichen | Bean Validation |
+| Pflicht bei Person | `Vorname darf bei Personen nicht leer sein` |
+
+---
+
+### nachname
+
+| Regel | Meldung |
+|------|---------|
+| Pflicht | `Nachname/Firmenname darf nicht leer sein` |
+| max 50 Zeichen | Bean Validation |
+
+---
+
+### anrede
+
+| Regel |
+|------|
+| max 50 Zeichen |
+
+---
+
+### akademischerTitel
+
+| Regel |
+|------|
+| max 50 Zeichen |
+
+---
+
+### plz
+
+| Regel |
+|------|
+| max 50 Zeichen |
+
+---
+
+### ort
+
+| Regel |
+|------|
+| max 50 Zeichen |
+
+---
+
+### strasseHausNr
+
+| Regel |
+|------|
+| max 50 Zeichen |
+
+---
+
+### geburtsdatum
+
+Format:
 
 ```json
-{
-  "stammdaten": {
-    "personFirma": false,
-    "anrede": "Herr",
-    "akademischerTitel": "",
-    "vorname": "Max",
-    "nachname": "Mustermann",
-    "plz": "99084",
-    "ort": "Erfurt",
-    "strasseHausNr": "Musterstraße 1",
-    "geburtsdatum": "1980-05-20"
-  }
-}
+"1980-05-20"
 ```
 
-## 5.1 Feld `personFirma`
+Typ:
 
-| Eigenschaft | Wert |
-|---|---|
-| JSON-Feld | `personFirma` |
-| Java-Typ | `Boolean` |
-| DB-Feld | `tblMitglieder.PersonFirma` |
-| DB-Typ | `BIT(1) NOT NULL DEFAULT b'0'` |
-| Bedeutung `false` | natürliche Person |
-| Bedeutung `true` | Firma / Organisation / Sponsor |
-| Default bei Neuanlage | `false` |
+```text
+LocalDate
+```
 
-### Validierungen
-
-| Endpunkt | Regel | Meldung | Fehlerfeld | Quelle |
-|---|---|---|---|---|
-| `PUT /api/members/{id}/stammdaten` | muss angegeben werden | `Person/Firma muss angegeben werden` | `personFirma` | Bean Validation / Service |
-| `POST /api/members` | falls nicht angegeben, wird `false` angenommen | keine Fehlermeldung | — | Service-Default |
-
----
-
-## 5.2 Feld `vorname`
-
-Bei natürlichen Personen ist `vorname` der Vorname.  
-Bei Firmen kann `vorname` als Firmenzusatz verwendet werden.
-
-### Validierungen
-
-| Endpunkt | Regel | Meldung | Fehlerfeld | Quelle |
-|---|---|---|---|---|
-| `PUT /api/members/{id}/stammdaten` | maximal 50 Zeichen | `Vorname darf maximal 50 Zeichen haben` | `vorname` | Bean Validation |
-| `PUT /api/members/{id}/stammdaten` | Pflicht, wenn `personFirma = false` | `Vorname darf bei Personen nicht leer sein` | `vorname` | Service |
-| `POST /api/members` | Pflicht, wenn `personFirma = false` oder nicht angegeben | `Vorname darf bei Personen nicht leer sein` | `vorname` | Service |
-| `POST /api/members` / `PUT /stammdaten` | optional, wenn `personFirma = true` | keine Fehlermeldung | — | Service |
-
----
-
-## 5.3 Feld `nachname`
-
-Bei natürlichen Personen ist `nachname` der Nachname.  
-Bei Firmen ist `nachname` der Firmenname.
-
-### Validierungen
-
-| Endpunkt | Regel | Meldung | Fehlerfeld | Quelle |
-|---|---|---|---|---|
-| `PUT /api/members/{id}/stammdaten` | darf nicht leer sein | `Nachname darf nicht leer sein` | `nachname` | Bean Validation |
-| `PUT /api/members/{id}/stammdaten` | maximal 50 Zeichen | `Nachname darf maximal 50 Zeichen haben` | `nachname` | Bean Validation |
-| `POST /api/members` | darf nicht leer sein | `Nachname/Firmenname darf nicht leer sein` | `nachname` | Service |
-| `PUT /api/members/{id}/stammdaten` | fachlich Pflicht als Nachname/Firmenname | `Nachname/Firmenname darf nicht leer sein` | `nachname` | Service |
-
-Hinweis: Bei `PUT /stammdaten` kann zuerst die Bean Validation greifen und die Meldung `Nachname darf nicht leer sein` liefern.
-
----
-
-## 5.4 Feld `anrede`
-
-### Validierungen
-
-| Endpunkt | Regel | Meldung | Fehlerfeld | Quelle |
-|---|---|---|---|---|
-| `PUT /api/members/{id}/stammdaten` | maximal 50 Zeichen | `Anrede darf maximal 50 Zeichen haben` | `anrede` | Bean Validation |
-
-Hinweise:
-
-- Bei Personen wird bei Neuanlage ohne Angabe bisher der Default `Herr` verwendet.
-- Bei Firmen ist `anrede` fachlich optional.
-- Das Frontend sollte `anrede` bei Firmen ausblenden oder deaktivieren.
-
----
-
-## 5.5 Feld `akademischerTitel`
-
-### Validierungen
-
-| Endpunkt | Regel | Meldung | Fehlerfeld | Quelle |
-|---|---|---|---|---|
-| `PUT /api/members/{id}/stammdaten` | maximal 50 Zeichen | `Akademischer Titel darf maximal 50 Zeichen haben` | `akademischerTitel` | Bean Validation |
-
-Hinweis: Bei Firmen fachlich optional und im Frontend vorzugsweise auszublenden oder zu deaktivieren.
-
----
-
-## 5.6 Feld `plz`
-
-### Validierungen
-
-| Endpunkt | Regel | Meldung | Fehlerfeld | Quelle |
-|---|---|---|---|---|
-| `PUT /api/members/{id}/stammdaten` | maximal 50 Zeichen | `PLZ darf maximal 50 Zeichen haben` | `plz` | Bean Validation |
-
-Hinweis: PLZ wird als Text gespeichert, nicht numerisch.
-
----
-
-## 5.7 Feld `ort`
-
-### Validierungen
-
-| Endpunkt | Regel | Meldung | Fehlerfeld | Quelle |
-|---|---|---|---|---|
-| `PUT /api/members/{id}/stammdaten` | maximal 50 Zeichen | `Ort darf maximal 50 Zeichen haben` | `ort` | Bean Validation |
-
----
-
-## 5.8 Feld `strasseHausNr`
-
-### Validierungen
-
-| Endpunkt | Regel | Meldung | Fehlerfeld | Quelle |
-|---|---|---|---|---|
-| `PUT /api/members/{id}/stammdaten` | maximal 50 Zeichen | `Straße/Hausnummer darf maximal 50 Zeichen haben` | `strasseHausNr` | Bean Validation |
-
----
-
-## 5.9 Feld `geburtsdatum`
-
-### Validierungen
-
-Aktuell keine eigene fachliche Regel dokumentiert.
-
-Hinweise:
-
-- Optional.
-- Bei Firmen fachlich nicht relevant.
-- Das Frontend sollte `geburtsdatum` bei Firmen ausblenden oder deaktivieren.
-- Erwartetes JSON-Format: `YYYY-MM-DD`.
+Aktuell keine zusätzliche fachliche Backend-Regel.
 
 ---
 
 # 6. Kontakt
 
-## Endpunkt
+Endpoint:
 
 ```http
 PUT /api/members/{mitgliedsnummer}/kontakt
 ```
 
+---
+
 ## Felder
 
-```json
-{
-  "telefonPrivat": "0361...",
-  "telefonGeschaeftlich": "0361...",
-  "mobiltelefon": "0151...",
-  "email": "max@example.de",
-  "adresszusatz": "c/o Beispiel",
-  "briefanrede": "Lieber Sangesfreund Max Mustermann"
-}
-```
+| Feld |
+|------|
+| telefonPrivat |
+| telefonGeschaeftlich |
+| mobiltelefon |
+| email |
+| adresszusatz |
+| briefanrede |
+
+---
 
 ## Validierungen
 
-| Feld | Regel | Meldung | Fehlerfeld | Quelle |
-|---|---|---|---|---|
-| `email` | gültige E-Mail, sofern angegeben | abhängig von Annotation im DTO | `email` | Bean Validation |
-| `email` | maximal 100 Zeichen | abhängig von Annotation im DTO | `email` | Bean Validation / DB |
-| `adresszusatz` | maximal 50 Zeichen | abhängig von Annotation im DTO | `adresszusatz` | Bean Validation / DB |
+### email
 
-Hinweis: Für Telefonnummern ist aktuell nur eine leichte bzw. keine strenge fachliche Validierung vorgesehen.
+| Regel |
+|------|
+| gültiges E-Mail Format |
+| max 100 Zeichen |
+
+---
+
+### adresszusatz
+
+| Regel |
+|------|
+| max 50 Zeichen |
+
+---
+
+Telefonnummern:
+
+Aktuell keine strenge fachliche Backend-Validierung.
 
 ---
 
 # 7. Mitgliedschaft
 
-## Endpunkt
+Endpoint:
 
 ```http
 PUT /api/members/{mitgliedsnummer}/mitgliedschaft
 ```
 
-## Beispiel
+---
 
-```json
-{
-  "eintritt": "2024-01-01",
-  "austritt": null,
-  "mitgliedsstatusId": 4,
-  "stimmeId": 6,
-  "kammerchor": false
-}
-```
+## Felder
+
+| Feld | Typ |
+|------|-----|
+| `eintritt` | LocalDate |
+| `austritt` | LocalDate |
+| `mitgliedsstatusId` | Integer |
+| `stimmeId` | Integer |
+| `kammerchor` | Boolean |
+
+---
 
 ## Validierungen
 
-| Feld | Regel | Meldung | Fehlerfeld | Quelle |
-|---|---|---|---|---|
-| `mitgliedsstatusId` | muss in `tblMitgliederstatus_FT` existieren | `Ungültiger Mitgliederstatus` | `mitgliedsstatusId` | Service |
-| `stimmeId` | muss in `tblStimme_FT` existieren | `Ungültige Stimme` | `stimmeId` | Service |
-| `mitgliedsstatusId` | muss beim Update angegeben sein, sofern per DTO vorgeschrieben | abhängig von Annotation im DTO | `mitgliedsstatusId` | Bean Validation |
-| `stimmeId` | muss beim Update angegeben sein, sofern per DTO vorgeschrieben | abhängig von Annotation im DTO | `stimmeId` | Bean Validation |
+### mitgliedsstatusId
 
-Hinweis: Eine Regel „Austritt darf nicht vor Eintritt liegen“ ist fachlich sinnvoll. Falls sie im Service noch nicht implementiert ist, sollte sie später ergänzt werden.
+| Regel | Meldung |
+|------|---------|
+| Lookup muss existieren | `Ungültiger Mitgliederstatus` |
+
+---
+
+### stimmeId
+
+| Regel | Meldung |
+|------|---------|
+| Lookup muss existieren | `Ungültige Stimme` |
+
+---
+
+### Datum
+
+Format:
+
+```json
+"2026-05-19"
+```
+
+Typ:
+
+```text
+LocalDate
+```
 
 ---
 
 # 8. Datenschutz
 
-## Endpunkte
+Endpoint:
 
 ```http
-GET /api/members/{mitgliedsnummer}/datenschutz
 PUT /api/members/{mitgliedsnummer}/datenschutz
 ```
 
-## Beispiel
+---
 
-```json
-{
-  "datumDatenschutz": "2026-05-01T18:00:00",
-  "datenschutzNr14": true,
-  "datenschutzNr15": true,
-  "datenschutzNr16": false,
-  "datenschutzNr17": false,
-  "datenschutzNr18": true
-}
-```
+## Felder
+
+| Feld |
+|------|
+| datumDatenschutz |
+| datenschutzNr14 |
+| datenschutzNr15 |
+| datenschutzNr16 |
+| datenschutzNr17 |
+| datenschutzNr18 |
+
+---
 
 ## Validierungen
 
-| Feld | Regel | Meldung | Fehlerfeld | Quelle |
-|---|---|---|---|---|
-| `datumDatenschutz` | darf nicht in der Zukunft liegen | `Datum Datenschutz darf nicht in der Zukunft liegen` | `datumDatenschutz` | Service |
+### datumDatenschutz
 
-## Nicht gefunden
+| Regel | Meldung |
+|------|---------|
+| nicht in Zukunft | `Datum Datenschutz darf nicht in der Zukunft liegen` |
 
-| Fall | Meldung | Fehlerformat |
-|---|---|---|
-| Datenschutz-Datensatz existiert nicht | `Datenschutz nicht gefunden für Mitglied {mitgliedsnummer}` | allgemeiner `ErrorResponse` |
+Format:
+
+```json
+"2026-05-19"
+```
+
+Typ:
+
+```text
+LocalDate
+```
 
 ---
 
 # 9. Chorkleidung
 
-## Endpunkte
+Endpoint:
 
 ```http
-GET /api/members/{mitgliedsnummer}/chorkleidung
 PUT /api/members/{mitgliedsnummer}/chorkleidung
 ```
 
-## Beispiel
+---
+
+## Datumsfelder
+
+Typ:
+
+```text
+LocalDate
+```
+
+Format:
 
 ```json
-{
-  "ehemaligeStimme": "Tenor",
-  "uebergabeAm": "2026-05-01T18:00:00",
-  "bemerkungUebergabe": "Ausgegeben",
-  "neubeschaffung": true,
-  "datumAnteil": "2026-05-02T18:00:00",
-  "barzahlung": false,
-  "bearbeitungsstand": "offen",
-  "rueckgabeAm": null,
-  "bemerkungRueckgabe": null,
-  "kaufdatum": "2026-05-02T18:00:00",
-  "kaufpreis": 199.99,
-  "sommerkleidung": true,
-  "sommerkleidungErhalten": "2026-05-02T18:00:00",
-  "sommerkleidungRueckgabe": null
-}
+"2026-05-19"
 ```
+
+---
 
 ## Validierungen
 
-| Feld | Regel | Meldung | Fehlerfeld | Quelle |
-|---|---|---|---|---|
-| `rueckgabeAm` | darf nicht vor `uebergabeAm` liegen | `Rückgabe darf nicht vor Übergabe liegen` | `rueckgabeAm` | Service |
-| `sommerkleidungRueckgabe` | darf nicht vor `sommerkleidungErhalten` liegen | `Sommerkleidung-Rückgabe darf nicht vor Erhalt liegen` | `sommerkleidungRueckgabe` | Service |
-| `kaufpreis` | darf nicht negativ sein, sofern im DTO validiert | abhängig von Annotation im DTO | `kaufpreis` | Bean Validation |
+### rueckgabeAm
 
-## Nicht gefunden
+| Regel | Meldung |
+|------|---------|
+| nicht vor Übergabe | `Rückgabe darf nicht vor Übergabe liegen` |
 
-| Fall | Meldung | Fehlerformat |
-|---|---|---|
-| Chorkleidung-Datensatz existiert nicht | `Chorkleidung nicht gefunden für Mitglied {mitgliedsnummer}` | allgemeiner `ErrorResponse` |
+---
+
+### sommerkleidungRueckgabe
+
+| Regel | Meldung |
+|------|---------|
+| nicht vor Erhalt | `Sommerkleidung-Rückgabe darf nicht vor Erhalt liegen` |
+
+---
+
+### kaufpreis
+
+| Regel |
+|------|
+| nicht negativ |
 
 ---
 
 # 10. Mitglied anlegen
 
-## Endpunkt
+Endpoint:
 
 ```http
 POST /api/members
 ```
 
-## Beispiel Person
+---
 
-```json
-{
-  "stammdaten": {
-    "personFirma": false,
-    "anrede": "Herr",
-    "akademischerTitel": "",
-    "vorname": "Max",
-    "nachname": "Mustermann",
-    "plz": "99084",
-    "ort": "Erfurt",
-    "strasseHausNr": "Musterstraße 1",
-    "geburtsdatum": "1980-05-20"
-  },
-  "kontakt": {
-    "email": "max@example.de",
-    "briefanrede": "Lieber Sangesfreund Max Mustermann"
-  },
-  "mitgliedschaft": {
-    "eintritt": "2024-01-01",
-    "austritt": null,
-    "mitgliedsstatusId": 4,
-    "stimmeId": 6,
-    "kammerchor": false
-  }
-}
-```
+## Validierungen
 
-## Beispiel Firma
-
-```json
-{
-  "stammdaten": {
-    "personFirma": true,
-    "vorname": "Firmenzusatz",
-    "nachname": "Neue Firma GmbH",
-    "plz": "99084",
-    "ort": "Erfurt",
-    "strasseHausNr": "Musterstraße 1"
-  },
-  "kontakt": {
-    "email": "info@neue-firma.example"
-  },
-  "mitgliedschaft": {
-    "mitgliedsstatusId": 4,
-    "stimmeId": 6,
-    "kammerchor": false
-  }
-}
-```
-
-## Validierungen bei Neuanlage
-
-| Feld | Regel | Meldung | Fehlerfeld | Quelle |
-|---|---|---|---|---|
-| `stammdaten` | muss angegeben werden | `Stammdaten müssen angegeben werden` | aktuell allgemeiner Fehler oder Service-Fehler | Service |
-| `personFirma` | falls nicht angegeben, Default `false` | keine Fehlermeldung | — | Service |
-| `vorname` | Pflicht bei Person | `Vorname darf bei Personen nicht leer sein` | `vorname` | Service |
-| `nachname` | Pflicht bei Person und Firma | `Nachname/Firmenname darf nicht leer sein` | `nachname` | Service |
-| `mitgliedsstatusId` | muss existieren, sofern angegeben | `Ungültiger Mitgliederstatus` | `mitgliedsstatusId` | Service |
-| `stimmeId` | muss existieren, sofern angegeben | `Ungültige Stimme` | `stimmeId` | Service |
+| Regel | Meldung |
+|------|---------|
+| Stammdaten Pflicht | `Stammdaten müssen angegeben werden` |
+| Vorname bei Person Pflicht | `Vorname darf bei Personen nicht leer sein` |
+| Nachname/Firma Pflicht | `Nachname/Firmenname darf nicht leer sein` |
+| Mitgliederstatus gültig | `Ungültiger Mitgliederstatus` |
+| Stimme gültig | `Ungültige Stimme` |
 
 ---
 
-# 11. Mapping für das Frontend
+# 11. Admin User Management
 
-## 11.1 Feldmapping Stammdaten
+Basis:
 
-| Backend-Feld | Person-Label im Frontend | Firma-Label im Frontend |
-|---|---|---|
-| `personFirma` | Person/Firma | Person/Firma |
-| `vorname` | Vorname | Firmenzusatz |
-| `nachname` | Nachname | Firmenname |
-| `anrede` | Anrede | ausblenden/deaktivieren |
-| `akademischerTitel` | Akademischer Titel | ausblenden/deaktivieren |
-| `geburtsdatum` | Geburtsdatum | ausblenden/deaktivieren |
-| `plz` | PLZ | PLZ |
-| `ort` | Ort | Ort |
-| `strasseHausNr` | Straße/Hausnummer | Straße/Hausnummer |
-
-## 11.2 Fehlerfeld-Mapping
-
-Das Frontend sollte `validationErrors[].field` direkt auf Formularfelder mappen.
-
-Beispiele:
-
-| `field` | Formularbereich | Feld |
-|---|---|---|
-| `personFirma` | Stammdaten | Person/Firma |
-| `vorname` | Stammdaten | Vorname / Firmenzusatz |
-| `nachname` | Stammdaten | Nachname / Firmenname |
-| `mitgliedsstatusId` | Mitgliedschaft | Mitgliedsstatus |
-| `stimmeId` | Mitgliedschaft | Stimme |
-| `datumDatenschutz` | Datenschutz | Datum Datenschutz |
-| `rueckgabeAm` | Chorkleidung | Rückgabe am |
-| `sommerkleidungRueckgabe` | Chorkleidung | Sommerkleidung Rückgabe |
-
----
-
-# 12. Testfälle für Frontend und Postman
-
-## 12.1 Stammdaten Person erfolgreich
-
-```json
-{
-  "personFirma": false,
-  "anrede": "Herr",
-  "akademischerTitel": "Dr.",
-  "vorname": "Max",
-  "nachname": "Mustermann",
-  "plz": "99084",
-  "ort": "Erfurt",
-  "strasseHausNr": "Musterstraße 1",
-  "geburtsdatum": "1980-05-20"
-}
+```http
+/api/admin/users
 ```
 
-Erwartung: `200 OK`
-
----
-
-## 12.2 Person ohne Vorname
-
-```json
-{
-  "personFirma": false,
-  "vorname": "",
-  "nachname": "Mustermann"
-}
-```
-
-Erwartung: `400 Bad Request`
-
-```json
-{
-  "message": "Validierungsfehler",
-  "validationErrors": [
-    {
-      "field": "vorname",
-      "message": "Vorname darf bei Personen nicht leer sein"
-    }
-  ]
-}
-```
-
----
-
-## 12.3 Firma ohne Vorname/Firmenzusatz
-
-```json
-{
-  "personFirma": true,
-  "vorname": "",
-  "nachname": "Neue Firma GmbH"
-}
-```
-
-Erwartung: `200 OK`
-
----
-
-## 12.4 Firma ohne Nachname/Firmenname
-
-```json
-{
-  "personFirma": true,
-  "vorname": "Zusatz",
-  "nachname": ""
-}
-```
-
-Erwartung: `400 Bad Request`
-
-```json
-{
-  "message": "Validierungsfehler",
-  "validationErrors": [
-    {
-      "field": "nachname",
-      "message": "Nachname darf nicht leer sein"
-    }
-  ]
-}
-```
-
-Hinweis: Je nach Validierungspfad kann alternativ `Nachname/Firmenname darf nicht leer sein` geliefert werden.
-
----
-
-## 12.5 Ungültiger Mitgliederstatus
-
-```json
-{
-  "eintritt": "2024-01-01",
-  "austritt": null,
-  "mitgliedsstatusId": 9999,
-  "stimmeId": 6,
-  "kammerchor": false
-}
-```
-
-Erwartung: `400 Bad Request`
-
-```json
-{
-  "message": "Validierungsfehler",
-  "validationErrors": [
-    {
-      "field": "mitgliedsstatusId",
-      "message": "Ungültiger Mitgliederstatus"
-    }
-  ]
-}
-```
-
----
-
-## 12.6 Ungültige Stimme
-
-```json
-{
-  "eintritt": "2024-01-01",
-  "austritt": null,
-  "mitgliedsstatusId": 4,
-  "stimmeId": 9999,
-  "kammerchor": false
-}
-```
-
-Erwartung: `400 Bad Request`
-
-```json
-{
-  "message": "Validierungsfehler",
-  "validationErrors": [
-    {
-      "field": "stimmeId",
-      "message": "Ungültige Stimme"
-    }
-  ]
-}
-```
-
----
-
-## 12.7 Datenschutzdatum in der Zukunft
-
-```json
-{
-  "datumDatenschutz": "2999-01-01T00:00:00",
-  "datenschutzNr14": true,
-  "datenschutzNr15": false,
-  "datenschutzNr16": false,
-  "datenschutzNr17": false,
-  "datenschutzNr18": false
-}
-```
-
-Erwartung: `400 Bad Request`
-
-```json
-{
-  "message": "Validierungsfehler",
-  "validationErrors": [
-    {
-      "field": "datumDatenschutz",
-      "message": "Datum Datenschutz darf nicht in der Zukunft liegen"
-    }
-  ]
-}
-```
-
----
-
-## 12.8 Chorkleidung Rückgabe vor Übergabe
-
-```json
-{
-  "uebergabeAm": "2026-05-10T10:00:00",
-  "rueckgabeAm": "2026-05-01T10:00:00"
-}
-```
-
-Erwartung: `400 Bad Request`
-
-```json
-{
-  "message": "Validierungsfehler",
-  "validationErrors": [
-    {
-      "field": "rueckgabeAm",
-      "message": "Rückgabe darf nicht vor Übergabe liegen"
-    }
-  ]
-}
-```
-
----
-
-# 13. Hinweise für künftige Erweiterungen
-
-Bei neuen fachlichen feldbezogenen Regeln sollte bevorzugt `BusinessValidationException` verwendet werden.
-
-Empfohlenes Muster:
+Nur Rolle:
 
 ```text
+ADMIN
+```
+
+---
+
+## Benutzer anlegen
+
+Endpoint:
+
+```http
+POST /api/admin/users
+```
+
+Felder:
+
+| Feld |
+|------|
+| username |
+| password |
+| role |
+
+Validierungen:
+
+| Regel |
+|------|
+| Username Pflicht |
+| Passwort Pflicht |
+| Rolle Pflicht |
+| Username eindeutig |
+
+Duplicate Username:
+
+```http
+409 Conflict
+```
+
+---
+
+## Rolle ändern
+
+Endpoint:
+
+```http
+PUT /api/admin/users/{id}/role
+```
+
+Validierungen:
+
+| Regel |
+|------|
+| gültige Rolle |
+
+---
+
+## Aktiv/Inaktiv
+
+Endpoint:
+
+```http
+PUT /api/admin/users/{id}/active
+```
+
+Validierungen:
+
+Boolean Request erforderlich.
+
+---
+
+## Passwort ändern
+
+Endpoint:
+
+```http
+PUT /api/admin/users/{id}/password
+```
+
+Validierungen:
+
+Passwort Pflicht.
+
+---
+
+# 12. Testbeispiele
+
+## Ungültiger Login
+
+Erwartung:
+
+```http
+401 Unauthorized
+```
+
+---
+
+## Viewer versucht Update
+
+Erwartung:
+
+```http
+403 Forbidden
+```
+
+---
+
+## Ungültiger Mitgliederstatus
+
+Erwartung:
+
+```http
+400 Bad Request
+```
+
+---
+
+## Nicht gefundenes Mitglied
+
+Erwartung:
+
+```http
+404 Not Found
+```
+
+---
+
+## Duplicate Username
+
+Erwartung:
+
+```http
+409 Conflict
+```
+
+---
+
+# 13. Erweiterungsrichtlinien
+
+Neue fachliche Feldvalidierungen:
+
+bevorzugt:
+
+```java
+BusinessValidationException
+```
+
+Pattern:
+
+```java
 throwValidationError("feldname", "Fehlermeldung");
 ```
 
-Damit bleibt das Fehlerformat für das Frontend einheitlich.
+Nicht feldbezogene Fehler:
 
-Nicht feldbezogene Fehler können weiterhin als `BadRequestException`, `NotFoundException` oder andere allgemeine Fehler behandelt werden.
+- `BadRequestException`
+- `NotFoundException`
+
+Technische Fehler:
+
+zentraler GlobalExceptionHandler.
 
 ---
 
-# 14. Offene bzw. zu prüfende Punkte
+# 14. Geplante Erweiterungen
 
-| Thema | Status |
-|---|---|
-| Automatisierte Unit-/Integrationstests | geplant in separatem Schritt |
-| Vollständiger Abgleich aller Bean-Validation-Meldungen in DTOs | bei Bedarf nachziehen |
-| Mitgliedschaftsregel `Austritt darf nicht vor Eintritt liegen` | fachlich sinnvoll, Implementierungsstand prüfen |
-| Einheitliche Feldnamen bei verschachtelten POST-Requests | Frontend sollte Mapping testen |
-| PROD-Deployment der Person/Firma-Erweiterung | noch nicht erfolgt |
+Security Hardening:
+
+- Passwortregeln
+- Passwortwechsel beim Erstlogin
+- Initialpasswort
+- Passwort Reset Workflow
+- Fehlversuchszähler
+- temporäre Sperre
+- Session Timeout
+- Session Invalidierung

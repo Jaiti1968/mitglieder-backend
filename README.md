@@ -1,32 +1,34 @@
-# EMC Mitgliederverwaltung -- Backend
+# EMC Mitgliederverwaltung – Backend
 
-Spring Boot Backend für die Verwaltung der Mitgliedsdaten des EMC
-Männerchors.
+## Überblick
 
-Das Backend stellt eine REST-API bereit, kapselt den Zugriff auf MariaDB
-und läuft als Docker-Container auf dem NAS DH2300. Das Frontend wird
-separat als React-Anwendung umgesetzt.
+Spring Boot Backend für die Mitgliederverwaltung des EMC Männerchors.
 
-------------------------------------------------------------------------
+Das Backend stellt eine REST-API für Mitgliederverwaltung, Lookup-Daten und administrative Benutzerverwaltung bereit. Die Anwendung nutzt MariaDB als Persistenzschicht, läuft containerisiert auf dem NAS und wird durch ein separates React-Frontend verwendet.
 
-# Technologien
+**Aktueller Stand: Phase 3c abgeschlossen (Auth + Rollen + Admin-Benutzerverwaltung)**
 
--   Java 21
--   Spring Boot 3
--   Spring Web
--   Spring JDBC (`JdbcTemplate`)
--   MariaDB
--   Maven
--   Docker
--   Portainer
--   Lombok
--   Jakarta Validation
+---
 
-------------------------------------------------------------------------
+## Technologien
 
-# Architektur
+- Java 21
+- Spring Boot 3.5.x
+- Spring Web
+- Spring JDBC (`JdbcTemplate`)
+- Spring Security
+- Jakarta Validation
+- MariaDB
+- Flyway
+- Maven
+- Docker
+- Lombok
 
-``` text
+---
+
+## Architektur
+
+```text
 Controller
 → Service
 → Repository
@@ -34,93 +36,144 @@ Controller
 → MariaDB
 ```
 
-## Verantwortlichkeiten
+### Verantwortlichkeiten
 
-### Controller
+#### Controller
 
--   REST-Endpunkte
--   HTTP Request/Response
--   Request DTO Binding
--   Response-Serialisierung
+- REST-Endpunkte
+- HTTP Request/Response
+- DTO Binding
+- Response Serialisierung
 
-### Service
+#### Service
 
--   Geschäftslogik
--   fachliche Validierung
--   Transaktionen
--   Fehlerbehandlung
+- Geschäftslogik
+- fachliche Validierung
+- Transaktionssteuerung
 
-### Repository
+#### Repository
 
--   SQL-Zugriffe mit `JdbcTemplate`
--   Datenbankoperationen
+- SQL mit `JdbcTemplate`
+- Persistenzoperationen
 
-### Mapper
+#### Mapper
 
--   Mapping von `ResultSet` auf DTOs
--   zentrale Datentyp-Konvertierung
+- ResultSet → DTO Mapping
+- Typkonvertierungen
 
-### DTOs
+#### Exception Handling / Logging
 
--   `dto.member` → Response-/Fachmodelle
--   `dto.request` → Request DTOs
--   `dto.error` → Fehlerantworten
+- zentraler `GlobalExceptionHandler`
+- strukturierte Fehlerantworten
+- Request-ID Korrelation
 
-------------------------------------------------------------------------
+---
 
-# Fachliches Datumsmodell
+## Fachliches Datumsmodell
 
-## Grundsatz
+Grundsatz:
 
-**Das API-Fachmodell gewinnt über das technische Datenbankmodell.**
+> Das API-Fachmodell gewinnt über das technische Datenbankmodell.
 
-Auch wenn MariaDB-Spalten technisch als `datetime` definiert sind,
-verwendet die API für fachliche Datumsfelder konsequent:
+Fachliche Datumsfelder werden konsequent als:
 
-``` text
+```text
 LocalDate
 ```
 
-JSON-Format:
+serialisiert:
 
-``` json
+```json
 "2026-05-12"
 ```
 
-Nicht verwendet für fachliche Datumsfelder:
+Technische Zeitstempel verwenden weiterhin:
 
-``` text
+```text
 LocalDateTime
 ```
 
-Technische Zeitstempel (Fehlerzeitpunkte, Logging) verwenden weiterhin:
+### Beispiele für fachliche Datumsfelder
 
-``` text
-LocalDateTime
-```
+- `geburtsdatum`
+- `eintritt`
+- `austritt`
+- Datenschutz-Datum
+- Chorkleidungs-Datumsfelder
 
-## Betroffene Fachbereiche
+---
 
--   Stammdaten (`geburtsdatum`)
--   Mitgliedschaft (`eintritt`, `austritt`)
--   Datenschutz (`datumDatenschutz`)
--   Chorkleidung
-    -   `uebergabeAm`
-    -   `datumAnteil`
-    -   `rueckgabeAm`
-    -   `kaufdatum`
-    -   `sommerkleidungErhalten`
-    -   `sommerkleidungRueckgabe`
+## Sicherheit / Authentifizierung
 
-------------------------------------------------------------------------
+### Authentifizierungsmodell
 
-# Projektstruktur
+Session-basierte Authentifizierung mit Spring Security.
 
-``` text
+Es wird bewusst verwendet:
+
+- kein Basic Auth
+- kein JWT
+
+Ablauf:
+
+- Login erzeugt Server-Session
+- Session wird über Cookie gehalten
+- Frontend prüft Session über `/api/auth/me`
+
+### Rollenmodell
+
+- `ADMIN`
+- `EDITOR`
+- `VIEWER`
+
+### Berechtigungsmatrix
+
+| Bereich | ADMIN | EDITOR | VIEWER |
+|--------|------|--------|--------|
+| Login / Logout / me | ✅ | ✅ | ✅ |
+| Lookup lesen | ✅ | ✅ | ✅ |
+| Mitglieder lesen | ✅ | ✅ | ✅ |
+| Mitglied anlegen | ✅ | ✅ | ❌ |
+| Mitglied ändern | ✅ | ✅ | ❌ |
+| Mitglied löschen | ✅ | ❌ | ❌ |
+| Benutzerverwaltung | ✅ | ❌ | ❌ |
+
+### Aktueller Sicherheitsstand
+
+Bereits implementiert:
+
+- Session Login
+- Session Logout
+- Session Restore (`/api/auth/me`)
+- rollenbasierte Autorisierung
+- Admin-Benutzerverwaltung
+- neutrales Login-Fehlerverhalten
+- Passwort-Hashing via BCrypt
+- `last_login_at` Tracking
+
+Noch nicht umgesetzt:
+
+- Session Timeout / Auto Logout
+- Fehlversuchszähler
+- temporäre Kontosperre
+- Passwortwechsel beim Erstlogin
+- Initialpasswort-Workflow
+- Passwort Reset Workflow
+- Schutz letzter aktiver Admin
+- Session Invalidierung bei Rollenänderung
+
+---
+
+## Projektstruktur
+
+```text
 src/main/java/de/emc/mitglieder
+├── config
 ├── constant
 ├── controller
 ├── dto
+│   ├── admin
+│   ├── auth
 │   ├── error
 │   ├── member
 │   └── request
@@ -128,305 +181,292 @@ src/main/java/de/emc/mitglieder
 ├── logging
 ├── mapper
 ├── repository
+├── security
 ├── service
 └── validation
 ```
 
-------------------------------------------------------------------------
+---
 
-# Datenbank
+## Datenbank
 
-## Konfiguration
+### Kernbereiche
 
-``` properties
+Mitgliederdaten:
+
+- `tblMitglieder`
+- `tblKontaktdaten`
+- `tblMitgliedschaft`
+- `tblDatenschutz`
+- `tblChorkleidung`
+
+### Benutzerverwaltung
+
+```text
+tblUsers
+```
+
+Wichtige Felder:
+
+```text
+id
+username
+password_hash
+role
+active
+created_at
+last_login_at
+```
+
+### Lookup Tabellen
+
+- `tblMitgliederstatus_FT`
+- `tblStimme_FT`
+- `tblAllgemein_FT`
+
+### Konfiguration
+
+```properties
 spring.datasource.url=${DB_URL}
 spring.datasource.username=${DB_USERNAME}
 spring.datasource.password=${DB_PASSWORD}
-spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
 ```
 
-## Beispiel ENV
+Beispiel:
 
-``` text
-DB_URL=jdbc:mariadb://192.168.xxx.xxx:3306/emc_mitglieder_dev
+```text
+DB_URL=jdbc:mariadb://192.168.x.x:3306/emc_mitglieder_dev
 DB_USERNAME=emc_mitglieder_rw
 DB_PASSWORD=********
 ```
 
-## Tabellen
+---
 
-### Kern
+## Mitgliedsnummernvergabe
 
--   `tblMitglieder`
--   `tblKontaktdaten`
--   `tblMitgliedschaft`
+Transaktionssichere Vergabe über:
 
-### Erweiterungen
-
--   `tblDatenschutz`
--   `tblChorkleidung`
-
-### Lookups
-
--   `tblMitgliederstatus_FT`
--   `tblStimme_FT`
--   `tblAllgemein_FT`
-
-------------------------------------------------------------------------
-
-# Mitgliedsnummernvergabe
-
-Transaktionssicher über:
-
-``` sql
-SELECT neueMitgliedsnummer
-FROM tblAllgemein_FT
-FOR UPDATE
+```sql
+SELECT neueMitgliedsnummer FROM tblAllgemein_FT FOR UPDATE
 ```
 
-Ablauf: 1. Nummer lesen 2. sperren 3. vergeben 4. inkrementieren 5.
-speichern
+Ablauf:
 
-------------------------------------------------------------------------
+1. Nummer lesen
+2. Datensatz sperren
+3. Nummer vergeben
+4. Nummer inkrementieren
+5. speichern
 
-# REST API
+Damit keine Doppelvergabe bei parallelen Requests.
+
+---
+
+## REST API
+
+## Auth
+
+```http
+POST /api/auth/login
+POST /api/auth/logout
+GET  /api/auth/me
+```
 
 ## Lookups
 
-``` http
+```http
 GET /api/lookups/member-status
 GET /api/lookups/voices
 ```
 
-## Mitgliederliste
+## Mitglieder
 
-``` http
-GET /api/members
+```http
+GET    /api/members
+GET    /api/members/{mitgliedsnummer}
+POST   /api/members
+PUT    /api/members/{mitgliedsnummer}/stammdaten
+PUT    /api/members/{mitgliedsnummer}/kontakt
+PUT    /api/members/{mitgliedsnummer}/mitgliedschaft
+PUT    /api/members/{mitgliedsnummer}/datenschutz
+PUT    /api/members/{mitgliedsnummer}/chorkleidung
+DELETE /api/members/{mitgliedsnummer}
 ```
+
+### Mitgliederliste Filter
 
 Query Parameter:
 
-  Parameter   Beschreibung
-  ----------- ---------------------------------
-  search      Freitextsuche
-  statusId    Mehrfachfilter Mitgliederstatus
-  stimmeId    Mehrfachfilter Stimme
-  page        Seite
-  pageSize    Seitengröße
+- `search`
+- `statusId` (mehrfach)
+- `stimmeId` (mehrfach)
+- `page`
+- `pageSize`
 
 Beispiele:
 
-``` http
+```http
 GET /api/members?page=1&pageSize=20
 GET /api/members?search=wolf
 GET /api/members?statusId=1&statusId=4
-GET /api/members?stimmeId=1&stimmeId=3
 ```
 
-## Mitglied Detail
+## Admin Benutzerverwaltung
 
-``` http
-GET /api/members/{mitgliedsnummer}
+```http
+GET /api/admin/users
+POST /api/admin/users
+PUT /api/admin/users/{id}/role
+PUT /api/admin/users/{id}/active
+PUT /api/admin/users/{id}/password
 ```
 
-## Mitglied anlegen
+---
 
-``` http
-POST /api/members
-```
+## Fehlerhandling
 
-Automatisch erzeugte Datensätze: - `tblMitglieder` - `tblKontaktdaten` -
-`tblMitgliedschaft` - `tblDatenschutz` - `tblChorkleidung`
+Standardformat:
 
-------------------------------------------------------------------------
-
-## Aktualisierung
-
-``` http
-PUT /api/members/{mitgliedsnummer}/stammdaten
-PUT /api/members/{mitgliedsnummer}/kontakt
-PUT /api/members/{mitgliedsnummer}/mitgliedschaft
-PUT /api/members/{mitgliedsnummer}/datenschutz
-PUT /api/members/{mitgliedsnummer}/chorkleidung
-```
-
-------------------------------------------------------------------------
-
-# API Beispiele
-
-## Datenschutz Request
-
-``` json
+```json
 {
-  "datumDatenschutz": "2026-05-01",
-  "datenschutzNr14": true,
-  "datenschutzNr15": true,
-  "datenschutzNr16": false,
-  "datenschutzNr17": false,
-  "datenschutzNr18": true
-}
-```
-
-## Chorkleidung Request
-
-``` json
-{
-  "ehemaligeStimme": "Tenor",
-  "uebergabeAm": "2026-05-01",
-  "datumAnteil": "2026-05-03",
-  "barzahlung": true,
-  "kaufdatum": "2026-05-05",
-  "kaufpreis": 199.99,
-  "sommerkleidungErhalten": "2026-05-10"
-}
-```
-
-------------------------------------------------------------------------
-
-# Validierung
-
-## DTO Validierung
-
--   Pflichtfelder
--   Feldlängen
--   E-Mail Format
--   numerische Wertebereiche
-
-## Fachliche Validierung
-
--   Lookup-Werte müssen existieren
--   Datumslogik
--   Zukunftsprüfungen, wo fachlich relevant
-
-## Datenbankregeln
-
--   Foreign Keys
--   NOT NULL
--   UNIQUE
-
-------------------------------------------------------------------------
-
-# Fehlerhandling
-
-Standard Error Response:
-
-``` json
-{
-  "timestamp": "2026-05-12T11:30:00",
-  "status": 404,
-  "error": "Not Found",
-  "message": "Mitglied nicht gefunden",
-  "path": "/api/members/N9999",
+  "timestamp": "2026-05-19T10:00:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Validierungsfehler",
+  "path": "/api/members",
   "requestId": "uuid"
 }
 ```
 
-Statuscodes: - 400 Bad Request - 404 Not Found - 409 Conflict - 500
-Internal Server Error
+HTTP Statuscodes:
 
-------------------------------------------------------------------------
+- 400 Bad Request
+- 401 Unauthorized
+- 403 Forbidden
+- 404 Not Found
+- 409 Conflict
+- 500 Internal Server Error
 
-# Logging
+### Login Fehlerverhalten
 
--   strukturierte Logs
--   Request-ID Korrelation
--   WARN für fachliche Fehler
--   ERROR für technische Fehler
+Aus Sicherheitsgründen werden Login-Fehler neutral beantwortet:
 
-Response Header:
+```text
+Anmeldung nicht möglich.
+```
 
-``` text
+Damit werden keine Details preisgegeben:
+
+- falsches Passwort
+- deaktivierter Benutzer
+- spätere Sperrmechanismen
+
+---
+
+## Logging
+
+Logging-Konzept:
+
+- strukturierte Logs
+- Request-ID Korrelation
+- WARN für fachliche Fehler
+- ERROR für technische Fehler
+
+Header:
+
+```text
 X-Request-Id
 ```
 
-------------------------------------------------------------------------
+---
 
-# Docker Deployment
+## Tests
 
-## Build
+### Aktueller Backend-Teststand
 
-``` bash
-mvn clean package
-docker build -t emc-backend .
+Vorhanden:
+
+- `AuthControllerTest`
+- `AdminSecurityTest`
+- `AdminUserControllerTest`
+- bestehende Member-/Validierungs-Tests
+
+Ausführen:
+
+```bash
+mvn test
 ```
 
-## Run
+---
 
-``` bash
+## Build / Deployment
+
+### Build
+
+```bash
+mvn clean package
+```
+
+### Docker
+
+```bash
+docker build -t emc-backend .
 docker run -d -p 8080:8080 emc-backend
 ```
 
-## Deployment Modell
+### Zielplattform
 
--   DEV Image (`:dev`)
--   PROD Image (`:prod`)
-
-NAS Zielplattform: UGREEN NAS DH2300
-
-------------------------------------------------------------------------
-
-# Test
-
-Empfohlen: Postman
-
-Wichtige Endpunkte:
-
-``` http
-GET /api/lookups/member-status
-GET /api/lookups/voices
-GET /api/members
-GET /api/members/{mitgliedsnummer}
-POST /api/members
-PUT /api/members/{mitgliedsnummer}/stammdaten
-PUT /api/members/{mitgliedsnummer}/kontakt
-PUT /api/members/{mitgliedsnummer}/mitgliedschaft
-PUT /api/members/{mitgliedsnummer}/datenschutz
-PUT /api/members/{mitgliedsnummer}/chorkleidung
+```text
+UGREEN NAS DH2300
 ```
 
-Datums-Tests immer mit:
+Deployment erfolgt containerisiert auf dem NAS.
 
-``` json
-"2026-05-12"
-```
+---
 
-nicht:
+## Projektstatus
 
-``` json
-"2026-05-12T00:00:00"
-```
+### Fertig
 
-------------------------------------------------------------------------
+- Lookup APIs
+- Mitgliederliste
+- Suche / Filter / Pagination
+- Detailansicht
+- Mitglied anlegen
+- Mitglied aktualisieren
+- Datenschutz
+- Chorkleidung
+- Löschen
+- Global Exception Handling
+- Request-ID Logging
+- Session Auth
+- Rollenmodell
+- Benutzerverwaltung
+- Security Tests
 
-# Projektstatus
+### Geplant (Phase 4+)
 
-  Bereich              Status
-  -------------------- --------
--   Lookup APIs          fertig
--   Mitgliederliste      fertig
--   Suche                fertig
--   Pagination           fertig
--   Detailansicht        fertig
--   POST Mitglied        fertig
--   PUT Stammdaten       fertig
--   PUT Kontakt          fertig
--   PUT Mitgliedschaft   fertig
--   Datenschutz          fertig
--   Chorkleidung         fertig
--   Fehlerhandling       fertig
--   Request-ID Logging   fertig
--   Docker DEV/PROD      fertig
--   Login/Auth           offen
--   Rollen/Rechte        offen
+Security Hardening:
 
-------------------------------------------------------------------------
+- Passwort Lifecycle
+- Initialpasswort
+- Passwortwechsel beim Erstlogin
+- Session Timeout
+- Auto Logout
+- Brute Force Schutz
+- temporäre Sperren
+- Recovery-Konzept Admin
 
-# Nicht im MVP
+---
 
--   Ehrungen
--   Funktionen
--   Verteiler
--   Historisierung
--   Berichte
--   Benutzerverwaltung
--   Mailversand
+## Nicht im MVP
+
+Derzeit bewusst nicht umgesetzt:
+
+- Ehrungen
+- Funktionen
+- Verteiler
+- Historisierung
+- Berichte
+- Mailversand
+- Exportfunktionen
