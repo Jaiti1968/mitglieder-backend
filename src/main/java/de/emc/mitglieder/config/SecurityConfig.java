@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 
 @Configuration
 public class SecurityConfig {
@@ -35,9 +36,31 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/api/auth/logout").authenticated()
-                        .requestMatchers("/api/**").authenticated()
+
+                        .requestMatchers("/api/admin/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.GET, "/api/lookups/**")
+                        .hasAnyRole("ADMIN", "EDITOR", "VIEWER")
+
+                        .requestMatchers(HttpMethod.GET, "/api/members/**")
+                        .hasAnyRole("ADMIN", "EDITOR", "VIEWER")
+
+                        .requestMatchers(HttpMethod.POST, "/api/members")
+                        .hasAnyRole("ADMIN", "EDITOR")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/members/**")
+                        .hasAnyRole("ADMIN", "EDITOR")
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/members/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers("/api/**")
+                        .authenticated()
+
                         .anyRequest().permitAll()
                 )
+
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
