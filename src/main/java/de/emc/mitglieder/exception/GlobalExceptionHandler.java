@@ -10,10 +10,12 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.authentication.BadCredentialsException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -148,19 +150,23 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(BadCredentialsException.class)
+    @ExceptionHandler({
+            BadCredentialsException.class,
+            DisabledException.class,
+            LockedException.class
+    })
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public ErrorResponse handleBadCredentials(
-            BadCredentialsException ex,
+    public ErrorResponse handleAuthenticationFailure(
+            RuntimeException ex,
             HttpServletRequest request
     ) {
-        log.warn("Ungültiger Login-Versuch bei {}", request.getRequestURI());
+        log.warn("Fehlgeschlagener Login-Versuch bei {}", request.getRequestURI());
 
         return new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.UNAUTHORIZED.value(),
                 HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                "Ungültiger Benutzername oder Passwort",
+                "Anmeldung nicht möglich.",
                 request.getRequestURI(),
                 MDC.get("requestId")
         );
