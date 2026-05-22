@@ -6,7 +6,7 @@ Spring Boot Backend für die Mitgliederverwaltung des EMC Männerchors.
 
 Das Backend stellt eine REST-API für Mitgliederverwaltung, Lookup-Daten und administrative Benutzerverwaltung bereit. Die Anwendung nutzt MariaDB als Persistenzschicht, läuft containerisiert auf dem NAS und wird durch ein separates React-Frontend verwendet.
 
-**Aktueller Stand: Phase 3c abgeschlossen (Auth + Rollen + Admin-Benutzerverwaltung)**
+**Aktueller Stand: Phase 3c abgeschlossen (Auth + Rollen + Admin-Benutzerverwaltung + Versionsinformationen)**
 
 ---
 
@@ -23,6 +23,7 @@ Das Backend stellt eine REST-API für Mitgliederverwaltung, Lookup-Daten und adm
 - Maven
 - Docker
 - Lombok
+- Spring Boot Build Metadata (`build-info`)
 
 ---
 
@@ -131,6 +132,7 @@ Ablauf:
 | Bereich | ADMIN | EDITOR | VIEWER |
 |--------|------|--------|--------|
 | Login / Logout / me | ✅ | ✅ | ✅ |
+| Systeminformationen | ✅ | ✅ | ✅ |
 | Lookup lesen | ✅ | ✅ | ✅ |
 | Mitglieder lesen | ✅ | ✅ | ✅ |
 | Mitglied anlegen | ✅ | ✅ | ❌ |
@@ -150,6 +152,7 @@ Bereits implementiert:
 - neutrales Login-Fehlerverhalten
 - Passwort-Hashing via BCrypt
 - `last_login_at` Tracking
+- authentifizierter technischer System-Endpoint
 
 Noch nicht umgesetzt:
 
@@ -171,6 +174,7 @@ src/main/java/de/emc/mitglieder
 ├── config
 ├── constant
 ├── controller
+│   └── SystemInfoController
 ├── dto
 │   ├── admin
 │   ├── auth
@@ -232,11 +236,11 @@ spring.datasource.username=${DB_USERNAME}
 spring.datasource.password=${DB_PASSWORD}
 ```
 
-Beispiel:
+Beispiel DEV:
 
 ```text
 DB_URL=jdbc:mariadb://192.168.x.x:3306/emc_mitglieder_dev
-DB_USERNAME=emc_mitglieder_rw
+DB_USERNAME=emc_backend_dev_rw
 DB_PASSWORD=********
 ```
 
@@ -264,13 +268,37 @@ Damit keine Doppelvergabe bei parallelen Requests.
 
 ## REST API
 
-## Auth
+## Auth / System
 
 ```http
 POST /api/auth/login
 POST /api/auth/logout
 GET  /api/auth/me
+GET  /api/system/info
 ```
+
+### Systeminformationen
+
+Authentifizierter technischer Endpoint für Betriebs- und Supportzwecke.
+
+```http
+GET /api/system/info
+```
+
+Beispiel Response:
+
+```json
+{
+  "backendVersion": "1.1.1-SNAPSHOT"
+}
+```
+
+Verwendungszwecke:
+
+- Deployment Smoke Tests
+- Support / Diagnose
+- Frontend Versionsanzeige
+- Betriebsidentifikation
 
 ## Lookups
 
@@ -278,6 +306,8 @@ GET  /api/auth/me
 GET /api/lookups/member-status
 GET /api/lookups/voices
 ```
+
+---
 
 ## Mitglieder
 
@@ -309,7 +339,10 @@ Beispiele:
 GET /api/members?page=1&pageSize=20
 GET /api/members?search=wolf
 GET /api/members?statusId=1&statusId=4
+GET /api/members?stimmeId=2&stimmeId=5
 ```
+
+---
 
 ## Admin Benutzerverwaltung
 
@@ -389,12 +422,19 @@ Vorhanden:
 - `AuthControllerTest`
 - `AdminSecurityTest`
 - `AdminUserControllerTest`
+- `SystemInfoControllerTest`
 - bestehende Member-/Validierungs-Tests
 
 Ausführen:
 
 ```bash
 mvn test
+```
+
+Vollständiger Build-Test:
+
+```bash
+mvn clean package
 ```
 
 ---
@@ -406,6 +446,20 @@ mvn test
 ```bash
 mvn clean package
 ```
+
+Der Build erzeugt zusätzlich Spring Boot Build-Metadaten:
+
+```text
+META-INF/build-info.properties
+```
+
+Diese Metadaten werden für den System-Endpoint verwendet:
+
+```http
+GET /api/system/info
+```
+
+und liefern die aktuell deployte Backend-Version.
 
 ### Docker
 
@@ -421,6 +475,10 @@ UGREEN NAS DH2300
 ```
 
 Deployment erfolgt containerisiert auf dem NAS.
+
+Details zum operativen Deployment:
+
+siehe Deployment-Handbuch.
 
 ---
 
@@ -443,6 +501,8 @@ Deployment erfolgt containerisiert auf dem NAS.
 - Rollenmodell
 - Benutzerverwaltung
 - Security Tests
+- System Info Endpoint
+- Build Version Metadata
 
 ### Geplant (Phase 4+)
 
