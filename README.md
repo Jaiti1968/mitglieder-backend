@@ -251,6 +251,16 @@ Für Backend Integration Tests existiert eine separate Test-Datenbank:
 ```text
 emc_mitglieder_test
 ```
+Zugriff erfolgt über einen dedizierten Test-Datenbankbenutzer:
+
+```text
+emc_backend_test_rw
+```
+
+Rechte:
+
+- ausschließlich auf `emc_mitglieder_test`
+- keine Nutzung von persönlichen Entwicklungsdatenbankkonten
 
 Zweck:
 
