@@ -6,7 +6,7 @@ Spring Boot Backend für die Mitgliederverwaltung des EMC Männerchors.
 
 Das Backend stellt eine REST-API für Mitgliederverwaltung, Lookup-Daten und administrative Benutzerverwaltung bereit. Die Anwendung nutzt MariaDB als Persistenzschicht, läuft containerisiert auf dem NAS und wird durch ein separates React-Frontend verwendet.
 
-**Aktueller Stand: Phase 3c abgeschlossen (Auth + Rollen + Admin-Benutzerverwaltung + Versionsinformationen + Backend Integration Tests Phase 1)**
+**Aktueller Stand: Phase 3c abgeschlossen (Auth + Rollen + Admin-Benutzerverwaltung + Versionsinformationen + Backend Integration Tests Phase 1 + Phase 2)**
 
 ---
 
@@ -492,7 +492,9 @@ Begründung:
 - `SystemInfoControllerTest`
 - bestehende Member-/Validierungs-Tests
 
-#### Integration Tests – Phase 1
+#### Integration Tests
+
+**Phase 1**
 
 - `AuthSessionIntegrationTest`
 - `AuthorizationIntegrationTest`
@@ -508,6 +510,28 @@ Abgedeckter Scope:
 - Mitglieder lesen
 - Mitglieder schreiben
 - echte Persistenzprüfung via JdbcTemplate
+
+**Phase 2**
+
+- `AdminUserIntegrationTest`
+- `UserLoginStateIntegrationTest`
+
+Zusätzlicher Scope:
+
+- Admin Userliste
+- Admin Benutzer anlegen
+- Rollenänderung
+- aktiv/inaktiv setzen
+- Passwortänderung
+- Login-Sperre für deaktivierte Benutzer
+- Passwortwechsel-Verifikation
+- Admin-Endpunkt-Autorisierung
+
+Aktueller Integrations-Teststand:
+
+```text
+25 Integration Tests
+```
 
 ### Test-Infrastruktur
 
@@ -617,6 +641,7 @@ siehe Deployment-Handbuch.
 - Benutzerverwaltung
 - Security Tests
 - Backend Integration Tests Phase 1
+- Backend Integration Tests Phase 2
 - System Info Endpoint
 - Build Version Metadata
 
@@ -635,7 +660,6 @@ Security Hardening:
 
 Teststrategie:
 
-- Backend Integration Tests Phase 2 (Admin Benutzerverwaltung)
 - Backend Integration Tests Phase 3 (Mitglied anlegen / Transaktionen)
 
 ---
