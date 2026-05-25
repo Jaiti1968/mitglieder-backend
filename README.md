@@ -6,7 +6,7 @@ Spring Boot Backend für die Mitgliederverwaltung des EMC Männerchors.
 
 Das Backend stellt eine REST-API für Mitgliederverwaltung, Lookup-Daten und administrative Benutzerverwaltung bereit. Die Anwendung nutzt MariaDB als Persistenzschicht, läuft containerisiert auf dem NAS und wird durch ein separates React-Frontend verwendet.
 
-**Aktueller Stand: Phase 3c abgeschlossen (Auth + Rollen + Admin-Benutzerverwaltung + Versionsinformationen)**
+**Aktueller Stand: Phase 3c abgeschlossen (Auth + Rollen + Admin-Benutzerverwaltung + Versionsinformationen + Backend Integration Tests Phase 1)**
 
 ---
 
@@ -244,6 +244,26 @@ DB_USERNAME=emc_backend_dev_rw
 DB_PASSWORD=********
 ```
 
+### Test-Datenbank
+
+Für Backend Integration Tests existiert eine separate Test-Datenbank:
+
+```text
+emc_mitglieder_test
+```
+
+Zweck:
+
+- isolierte automatisierte Integrationstests
+- keine Beeinflussung der DEV-Daten
+- reproduzierbare Testdatenbasis
+
+Abgrenzung:
+
+- `emc_mitglieder_dev` → manuelle Entwicklung / Frontend / Postman
+- `emc_mitglieder_test` → automatisierte Backend Integration Tests
+- `emc_mitglieder_prod` → produktiver Betrieb
+
 ---
 
 ## Mitgliedsnummernvergabe
@@ -299,6 +319,8 @@ Verwendungszwecke:
 - Support / Diagnose
 - Frontend Versionsanzeige
 - Betriebsidentifikation
+
+---
 
 ## Lookups
 
@@ -415,9 +437,54 @@ X-Request-Id
 
 ## Tests
 
+### Teststrategie
+
+Das Backend nutzt eine mehrstufige Teststrategie.
+
+#### Unit / Slice Tests
+
+Ziel:
+
+- schnelle technische Rückmeldung
+- isolierte Controller-/Security-/Validierungsprüfungen
+
+Bereiche:
+
+- Controller Tests
+- Security Tests
+- DTO / Validierungsnahe Tests
+- bestehende Member-/Service-nahe Tests
+
+#### Integration Tests
+
+Ziel:
+
+- realistische Ende-zu-Ende Backend-Prüfung innerhalb des Spring Backends
+
+Technik:
+
+- vollständiger Spring Boot Kontext (`@SpringBootTest`)
+- MockMvc
+- echte Spring Security
+- echte Session-basierte Authentifizierung
+- echte MariaDB Test-Datenbank
+- echte JdbcTemplate Persistenzprüfung
+
+Bewusste Projektentscheidung:
+
+```text
+keine Testcontainers
+```
+
+Begründung:
+
+- Einzelentwicklerprojekt
+- pragmatischer Wartungsaufwand
+- produktionsnahe Testumgebung über dedizierte TEST DB
+
 ### Aktueller Backend-Teststand
 
-Vorhanden:
+#### Unit / bestehende Tests
 
 - `AuthControllerTest`
 - `AdminSecurityTest`
@@ -425,13 +492,61 @@ Vorhanden:
 - `SystemInfoControllerTest`
 - bestehende Member-/Validierungs-Tests
 
-Ausführen:
+#### Integration Tests – Phase 1
+
+- `AuthSessionIntegrationTest`
+- `AuthorizationIntegrationTest`
+- `MemberReadIntegrationTest`
+- `MemberWriteIntegrationTest`
+
+Abgedeckter Scope:
+
+- Login
+- Logout
+- Session Restore (`/api/auth/me`)
+- Rollenbasierte Autorisierung
+- Mitglieder lesen
+- Mitglieder schreiben
+- echte Persistenzprüfung via JdbcTemplate
+
+### Test-Infrastruktur
+
+Spring Test Profil:
+
+```text
+application-test.properties
+```
+
+Testdatenbank:
+
+```text
+emc_mitglieder_test
+```
+
+Definierte Testuser:
+
+- `it_admin`
+- `it_editor`
+- `it_viewer`
+
+Definierte Testmitglieder:
+
+- `N1001`
+- `N1002`
+
+Hinweis:
+
+Write-Integrationtests setzen geänderte Testdaten zurück, damit die Gesamttest-Suite stabil reproduzierbar bleibt.
+
+### Ausführen
+
+Alle Tests:
 
 ```bash
 mvn test
 ```
 
-Vollständiger Build-Test:
+Vollständiger Build:
 
 ```bash
 mvn clean package
@@ -501,6 +616,7 @@ siehe Deployment-Handbuch.
 - Rollenmodell
 - Benutzerverwaltung
 - Security Tests
+- Backend Integration Tests Phase 1
 - System Info Endpoint
 - Build Version Metadata
 
@@ -516,6 +632,11 @@ Security Hardening:
 - Brute Force Schutz
 - temporäre Sperren
 - Recovery-Konzept Admin
+
+Teststrategie:
+
+- Backend Integration Tests Phase 2 (Admin Benutzerverwaltung)
+- Backend Integration Tests Phase 3 (Mitglied anlegen / Transaktionen)
 
 ---
 
