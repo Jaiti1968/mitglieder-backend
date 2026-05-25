@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.junit.jupiter.api.AfterEach;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -105,5 +106,22 @@ class MemberWriteIntegrationTest {
         );
 
         assertEquals("max.neu@example.test", email);
+    }
+
+    @AfterEach
+    void resetTestMember() {
+        jdbcTemplate.update("""
+            UPDATE tblMitglieder
+            SET Vorname = ?, Nachname = ?, StrasseHausNr = ?
+            WHERE Mitgliedsnummer = ?
+            """,
+                "Max", "Mustermann", "Teststraße 1", "N1001");
+
+        jdbcTemplate.update("""
+            UPDATE tblKontaktdaten
+            SET EMail = ?, Telefon_privat = ?, Briefanrede = ?
+            WHERE Mitgliedsnummer = ?
+            """,
+                "max.mustermann@example.test", null, "Lieber Sangesfreund Max Mustermann", "N1001");
     }
 }
