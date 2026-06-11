@@ -1,33 +1,40 @@
 # EMC Mitgliederverwaltung – Backend
 
-## Überblick
+## 1. Überblick
 
 Spring Boot Backend für die Mitgliederverwaltung des EMC Männerchors.
 
-Das Backend stellt eine REST-API für Mitgliederverwaltung, Lookup-Daten und administrative Benutzerverwaltung bereit. Die Anwendung nutzt MariaDB als Persistenzschicht, läuft containerisiert auf dem NAS und wird durch ein separates React-Frontend verwendet.
+Das Backend stellt eine REST-API für Mitgliederverwaltung, Lookup-Daten, Authentifizierung, rollenbasierte Autorisierung, administrative Benutzerverwaltung sowie technische Betriebsinformationen bereit.
 
-**Aktueller Stand: Phase 3c abgeschlossen (Auth + Rollen + Admin-Benutzerverwaltung + Versionsinformationen + Backend Integration Tests Phase 1 - 3)**
+Die Anwendung nutzt MariaDB als Persistenzschicht, läuft containerisiert auf dem NAS und wird durch ein separates React-Frontend verwendet.
 
----
+Diese README beschreibt den technischen Überblick des Backend-Repositories.
 
-## Technologien
+Projektsteuerung, Roadmap, Backlog und Projektstatus werden zentral in der Produktdokumentation geführt.
 
-- Java 21
-- Spring Boot 3.5.x
-- Spring Web
-- Spring JDBC (`JdbcTemplate`)
-- Spring Security
-- Jakarta Validation
-- MariaDB
-- Flyway
-- Maven
-- Docker
-- Lombok
-- Spring Boot Build Metadata (`build-info`)
+Betriebs- und Infrastrukturthemen werden zentral in EMC-INFRA dokumentiert.
 
 ---
 
-## Architektur
+## 2. Technologie-Stack
+
+* Java 21
+* Spring Boot 3.5.x
+* Spring Web
+* Spring JDBC (`JdbcTemplate`)
+* Spring Security
+* Spring Boot Actuator
+* Jakarta Validation
+* MariaDB
+* Flyway
+* Maven
+* Docker
+* Lombok
+* Spring Boot Build Metadata (`build-info`)
+
+---
+
+## 3. Systemarchitektur
 
 ```text
 Controller
@@ -37,174 +44,130 @@ Controller
 → MariaDB
 ```
 
-### Verantwortlichkeiten
+### Controller
 
-#### Controller
+* REST-Endpunkte
+* HTTP Request / Response
+* DTO Binding
+* Response Serialisierung
 
-- REST-Endpunkte
-- HTTP Request/Response
-- DTO Binding
-- Response Serialisierung
+### Service
 
-#### Service
+* Geschäftslogik
+* fachliche Validierung
+* Transaktionssteuerung
 
-- Geschäftslogik
-- fachliche Validierung
-- Transaktionssteuerung
+### Repository
 
-#### Repository
+* SQL mit `JdbcTemplate`
+* Persistenzoperationen
 
-- SQL mit `JdbcTemplate`
-- Persistenzoperationen
+### Mapper
 
-#### Mapper
+* ResultSet → DTO Mapping
+* Typkonvertierungen
 
-- ResultSet → DTO Mapping
-- Typkonvertierungen
+### Exception Handling
 
-#### Exception Handling / Logging
-
-- zentraler `GlobalExceptionHandler`
-- strukturierte Fehlerantworten
-- Request-ID Korrelation
+* zentraler `GlobalExceptionHandler`
+* strukturierte Fehlerantworten
+* Request-ID Korrelation
 
 ---
 
-## Fachliches Datumsmodell
-
-Grundsatz:
-
-> Das API-Fachmodell gewinnt über das technische Datenbankmodell.
-
-Fachliche Datumsfelder werden konsequent als:
-
-```text
-LocalDate
-```
-
-serialisiert:
-
-```json
-"2026-05-12"
-```
-
-Technische Zeitstempel verwenden weiterhin:
-
-```text
-LocalDateTime
-```
-
-### Beispiele für fachliche Datumsfelder
-
-- `geburtsdatum`
-- `eintritt`
-- `austritt`
-- Datenschutz-Datum
-- Chorkleidungs-Datumsfelder
-
----
-
-## Sicherheit / Authentifizierung
+## 4. Sicherheit und Autorisierung
 
 ### Authentifizierungsmodell
 
-Session-basierte Authentifizierung mit Spring Security.
+Das Backend verwendet sessionbasierte Authentifizierung mit Spring Security.
 
-Es wird bewusst verwendet:
+Bewusst nicht verwendet werden:
 
-- kein Basic Auth
-- kein JWT
+* Basic Auth
+* JWT
 
 Ablauf:
 
-- Login erzeugt Server-Session
-- Session wird über Cookie gehalten
-- Frontend prüft Session über `/api/auth/me`
+1. Login erzeugt eine serverseitige Session.
+2. Die Session wird über ein Cookie gehalten.
+3. Das Frontend prüft die aktive Session über `/api/auth/me`.
 
 ### Rollenmodell
 
-- `ADMIN`
-- `EDITOR`
-- `VIEWER`
+* `ADMIN`
+* `EDITOR`
+* `VIEWER`
 
 ### Berechtigungsmatrix
 
-| Bereich | ADMIN | EDITOR | VIEWER |
-|--------|------|--------|--------|
-| Login / Logout / me | ✅ | ✅ | ✅ |
-| Systeminformationen | ✅ | ✅ | ✅ |
-| Lookup lesen | ✅ | ✅ | ✅ |
-| Mitglieder lesen | ✅ | ✅ | ✅ |
-| Mitglied anlegen | ✅ | ✅ | ❌ |
-| Mitglied ändern | ✅ | ✅ | ❌ |
-| Mitglied löschen | ✅ | ❌ | ❌ |
-| Benutzerverwaltung | ✅ | ❌ | ❌ |
+| Bereich             | ADMIN | EDITOR | VIEWER |
+| ------------------- | ----: | -----: | -----: |
+| Login / Logout / me |     ✅ |      ✅ |      ✅ |
+| Systeminformationen |     ✅ |      ✅ |      ✅ |
+| Lookup lesen        |     ✅ |      ✅ |      ✅ |
+| Mitglieder lesen    |     ✅ |      ✅ |      ✅ |
+| Mitglied anlegen    |     ✅ |      ✅ |      ❌ |
+| Mitglied ändern     |     ✅ |      ✅ |      ❌ |
+| Mitglied löschen    |     ✅ |      ❌ |      ❌ |
+| Benutzerverwaltung  |     ✅ |      ❌ |      ❌ |
 
-### Aktueller Sicherheitsstand
+### Technischer Sicherheitsstand
 
-Bereits implementiert:
+Implementiert:
 
-- Session Login
-- Session Logout
-- Session Restore (`/api/auth/me`)
-- rollenbasierte Autorisierung
-- Admin-Benutzerverwaltung
-- neutrales Login-Fehlerverhalten
-- Passwort-Hashing via BCrypt
-- `last_login_at` Tracking
-- authentifizierter technischer System-Endpoint
+* Session Login
+* Session Logout
+* Session Restore (`/api/auth/me`)
+* rollenbasierte Autorisierung
+* Admin-Benutzerverwaltung
+* neutrales Login-Fehlerverhalten
+* Passwort-Hashing via BCrypt
+* `last_login_at` Tracking
+* authentifizierter technischer System-Endpoint
+* öffentliche Health-Endpunkte für Monitoring
 
-Noch nicht umgesetzt:
+Bewusst geschützt:
 
-- Session Timeout / Auto Logout
-- Fehlversuchszähler
-- temporäre Kontosperre
-- Passwortwechsel beim Erstlogin
-- Initialpasswort-Workflow
-- Passwort Reset Workflow
-- Schutz letzter aktiver Admin
-- Session Invalidierung bei Rollenänderung
+* `/api/system/info` ist authentifiziert.
+* `/api/**` ist grundsätzlich geschützt.
+* Nur `/actuator/health/**` ist öffentlich freigegeben.
 
 ---
 
-## Projektstruktur
+## 5. Datenhaltung
 
-```text
-src/main/java/de/emc/mitglieder
-├── config
-├── constant
-├── controller
-│   └── SystemInfoController
-├── dto
-│   ├── admin
-│   ├── auth
-│   ├── error
-│   ├── member
-│   └── request
-├── exception
-├── logging
-├── mapper
-├── repository
-├── security
-├── service
-└── validation
+### Datenbank
+
+Das Backend nutzt MariaDB.
+
+Die Datenbankverbindung wird über Umgebungsvariablen konfiguriert:
+
+```properties
+spring.datasource.url=${DB_URL}
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
 ```
 
----
+Beispiel DEV:
 
-## Datenbank
+```text
+DB_URL=jdbc:mariadb://192.168.x.x:3306/emc_mitglieder_dev
+DB_USERNAME=emc_backend_dev_rw
+DB_PASSWORD=********
+SPRING_PROFILES_ACTIVE=dev
+```
 
 ### Kernbereiche
 
 Mitgliederdaten:
 
-- `tblMitglieder`
-- `tblKontaktdaten`
-- `tblMitgliedschaft`
-- `tblDatenschutz`
-- `tblChorkleidung`
+* `tblMitglieder`
+* `tblKontaktdaten`
+* `tblMitgliedschaft`
+* `tblDatenschutz`
+* `tblChorkleidung`
 
-### Benutzerverwaltung
+Benutzerverwaltung:
 
 ```text
 tblUsers
@@ -222,83 +185,39 @@ created_at
 last_login_at
 ```
 
-### Lookup Tabellen
+Lookup-Tabellen:
 
-- `tblMitgliederstatus_FT`
-- `tblStimme_FT`
-- `tblAllgemein_FT`
-
-### Konfiguration
-
-```properties
-spring.datasource.url=${DB_URL}
-spring.datasource.username=${DB_USERNAME}
-spring.datasource.password=${DB_PASSWORD}
-```
-
-Beispiel DEV:
-
-```text
-DB_URL=jdbc:mariadb://192.168.x.x:3306/emc_mitglieder_dev
-DB_USERNAME=emc_backend_dev_rw
-DB_PASSWORD=********
-```
+* `tblMitgliederstatus_FT`
+* `tblStimme_FT`
+* `tblAllgemein_FT`
 
 ### Test-Datenbank
 
-Für Backend Integration Tests existiert eine separate Test-Datenbank:
+Für automatisierte Backend-Integrationstests existiert eine separate Test-Datenbank:
 
 ```text
 emc_mitglieder_test
 ```
+
 Zugriff erfolgt über einen dedizierten Test-Datenbankbenutzer:
 
 ```text
 emc_backend_test_rw
 ```
 
-Rechte:
-
-- ausschließlich auf `emc_mitglieder_test`
-- keine Nutzung von persönlichen Entwicklungsdatenbankkonten
-
-Zweck:
-
-- isolierte automatisierte Integrationstests
-- keine Beeinflussung der DEV-Daten
-- reproduzierbare Testdatenbasis
-
 Abgrenzung:
 
-- `emc_mitglieder_dev` → manuelle Entwicklung / Frontend / Postman
-- `emc_mitglieder_test` → automatisierte Backend Integration Tests
-- `emc_mitglieder_prod` → produktiver Betrieb
+| Umgebung              | Zweck                                    |
+| --------------------- | ---------------------------------------- |
+| `emc_mitglieder_dev`  | lokale Entwicklung, Frontend, Postman    |
+| `emc_mitglieder_test` | automatisierte Backend-Integrationstests |
+| `emc_mitglieder_prod` | produktiver Betrieb                      |
 
 ---
 
-## Mitgliedsnummernvergabe
+## 6. REST API
 
-Transaktionssichere Vergabe über:
-
-```sql
-SELECT neueMitgliedsnummer FROM tblAllgemein_FT FOR UPDATE
-```
-
-Ablauf:
-
-1. Nummer lesen
-2. Datensatz sperren
-3. Nummer vergeben
-4. Nummer inkrementieren
-5. speichern
-
-Damit keine Doppelvergabe bei parallelen Requests.
-
----
-
-## REST API
-
-## Auth / System
+### Authentifizierung und System
 
 ```http
 POST /api/auth/login
@@ -307,41 +226,14 @@ GET  /api/auth/me
 GET  /api/system/info
 ```
 
-### Systeminformationen
-
-Authentifizierter technischer Endpoint für Betriebs- und Supportzwecke.
-
-```http
-GET /api/system/info
-```
-
-Beispiel Response:
-
-```json
-{
-  "backendVersion": "1.1.1-SNAPSHOT"
-}
-```
-
-Verwendungszwecke:
-
-- Deployment Smoke Tests
-- Support / Diagnose
-- Frontend Versionsanzeige
-- Betriebsidentifikation
-
----
-
-## Lookups
+### Lookups
 
 ```http
 GET /api/lookups/member-status
 GET /api/lookups/voices
 ```
 
----
-
-## Mitglieder
+### Mitglieder
 
 ```http
 GET    /api/members
@@ -357,13 +249,13 @@ DELETE /api/members/{mitgliedsnummer}
 
 ### Mitgliederliste Filter
 
-Query Parameter:
+Query-Parameter:
 
-- `search`
-- `statusId` (mehrfach)
-- `stimmeId` (mehrfach)
-- `page`
-- `pageSize`
+* `search`
+* `statusId` mehrfach möglich
+* `stimmeId` mehrfach möglich
+* `page`
+* `pageSize`
 
 Beispiele:
 
@@ -374,9 +266,7 @@ GET /api/members?statusId=1&statusId=4
 GET /api/members?stimmeId=2&stimmeId=5
 ```
 
----
-
-## Admin Benutzerverwaltung
+### Admin Benutzerverwaltung
 
 ```http
 GET /api/admin/users
@@ -388,7 +278,188 @@ PUT /api/admin/users/{id}/password
 
 ---
 
-## Fehlerhandling
+## 7. Betriebsinformationen und Monitoring
+
+### Systeminformationen
+
+Das Backend stellt einen authentifizierten System-Endpoint bereit:
+
+```http
+GET /api/system/info
+```
+
+Beispiel:
+
+```json
+{
+  "backendVersion": "1.1.2-SNAPSHOT",
+  "environment": "DEV",
+  "activeProfiles": [
+    "dev"
+  ],
+  "buildTime": "2026-06-11T12:48:17.103Z"
+}
+```
+
+Gelieferte Informationen:
+
+* Backend-Version
+* Umgebung (`LOCAL`, `DEV`, `PROD`)
+* aktive Spring-Profile
+* Build-Zeitpunkt
+
+Zugriff:
+
+* authentifiziert
+* nutzbar durch `ADMIN`, `EDITOR`, `VIEWER`
+
+Verwendungszwecke:
+
+* Frontend-Versionsanzeige
+* Deployment Smoke Tests
+* Support
+* Betriebsidentifikation
+
+### Environment-Erkennung
+
+Die Umgebung wird aus den aktiven Spring-Profilen abgeleitet.
+
+| Spring-Profil                  | Anzeige |
+| ------------------------------ | ------- |
+| `dev`                          | `DEV`   |
+| `prod`                         | `PROD`  |
+| kein Profil / sonstige Profile | `LOCAL` |
+
+### Healthchecks
+
+Das Backend stellt Spring Boot Actuator Health-Endpunkte bereit.
+
+Öffentlich erreichbar:
+
+```http
+GET /actuator/health
+GET /actuator/health/liveness
+GET /actuator/health/readiness
+```
+
+### Liveness
+
+Prüft, ob die Anwendung grundsätzlich lauffähig ist.
+
+Beispiel:
+
+```json
+{
+  "status": "UP"
+}
+```
+
+### Readiness
+
+Prüft, ob die Anwendung fachlich betriebsbereit ist.
+
+Bestandteile:
+
+* Spring Readiness State
+* MariaDB Datenbankverbindung
+
+Projektentscheidung:
+
+Die MariaDB-Verbindung ist Bestandteil der Readiness-Prüfung.
+
+Ist MariaDB nicht erreichbar, liefert der Readiness-Endpunkt:
+
+```json
+{
+  "status": "DOWN"
+}
+```
+
+mit HTTP-Status:
+
+```text
+503 Service Unavailable
+```
+
+### Gesamt-Health
+
+Der Gesamt-Health-Endpunkt berücksichtigt die registrierten Health-Indikatoren.
+
+Bei erreichbarer Datenbank:
+
+```json
+{
+  "status": "UP"
+}
+```
+
+Bei nicht erreichbarer Datenbank:
+
+```json
+{
+  "status": "DOWN"
+}
+```
+
+### Actuator-Konfiguration
+
+```properties
+management.endpoints.web.exposure.include=health
+management.endpoint.health.show-details=never
+management.endpoint.health.probes.enabled=true
+management.health.defaults.enabled=true
+management.endpoint.health.group.readiness.include=readinessState,db
+```
+
+### Sicherheitsentscheidung
+
+Öffentlich:
+
+```text
+/actuator/health
+/actuator/health/liveness
+/actuator/health/readiness
+```
+
+Authentifiziert:
+
+```text
+/api/system/info
+```
+
+Nicht veröffentlicht:
+
+```text
+/actuator/env
+/actuator/metrics
+/actuator/mappings
+/actuator/beans
+/actuator/configprops
+/actuator/info
+```
+
+Damit wird die Informationspreisgabe auf das notwendige Minimum beschränkt.
+
+---
+
+## 8. Logging und Fehlerbehandlung
+
+### Logging
+
+Logging-Konzept:
+
+* strukturierte Logs
+* Request-ID Korrelation
+* `WARN` für fachliche Fehler
+* `ERROR` für technische Fehler
+
+Header:
+
+```text
+X-Request-Id
+```
+
+### Fehlerformat
 
 Standardformat:
 
@@ -403,82 +474,65 @@ Standardformat:
 }
 ```
 
-HTTP Statuscodes:
+HTTP-Statuscodes:
 
-- 400 Bad Request
-- 401 Unauthorized
-- 403 Forbidden
-- 404 Not Found
-- 409 Conflict
-- 500 Internal Server Error
+* `400 Bad Request`
+* `401 Unauthorized`
+* `403 Forbidden`
+* `404 Not Found`
+* `409 Conflict`
+* `500 Internal Server Error`
 
 ### Login Fehlerverhalten
 
-Aus Sicherheitsgründen werden Login-Fehler neutral beantwortet:
+Login-Fehler werden aus Sicherheitsgründen neutral beantwortet:
 
 ```text
 Anmeldung nicht möglich.
 ```
 
-Damit werden keine Details preisgegeben:
+Damit werden keine Details preisgegeben über:
 
-- falsches Passwort
-- deaktivierter Benutzer
-- spätere Sperrmechanismen
-
----
-
-## Logging
-
-Logging-Konzept:
-
-- strukturierte Logs
-- Request-ID Korrelation
-- WARN für fachliche Fehler
-- ERROR für technische Fehler
-
-Header:
-
-```text
-X-Request-Id
-```
+* falsches Passwort
+* deaktivierten Benutzer
+* spätere Sperrmechanismen
 
 ---
 
-## Tests
+## 9. Qualitätssicherung und Tests
 
 ### Teststrategie
 
 Das Backend nutzt eine mehrstufige Teststrategie.
 
-#### Unit / Slice Tests
+### Unit / Slice Tests
 
 Ziel:
 
-- schnelle technische Rückmeldung
-- isolierte Controller-/Security-/Validierungsprüfungen
+* schnelle technische Rückmeldung
+* isolierte Controller-, Security- und Validierungsprüfungen
 
 Bereiche:
 
-- Controller Tests
-- Security Tests
-- DTO / Validierungsnahe Tests
-- bestehende Member-/Service-nahe Tests
+* Controller Tests
+* Security Tests
+* DTO- und validierungsnahe Tests
+* Service-nahe Tests
 
-#### Integration Tests
+### Integration Tests
 
 Ziel:
 
-- realistische Ende-zu-Ende Backend-Prüfung innerhalb des Spring Backends
+* realistische Ende-zu-Ende-Prüfung innerhalb des Spring Backends
 
 Technik:
 
-- vollständiger Spring Boot Kontext (`@SpringBootTest`)
-- MockMvc
-- echte Spring Security
-- echte Session-basierte Authentifizierung
-- echte MariaDB Test-Datenbank
-- echte JdbcTemplate Persistenzprüfung
+* vollständiger Spring Boot Kontext (`@SpringBootTest`)
+* MockMvc
+* echte Spring Security
+* echte sessionbasierte Authentifizierung
+* echte MariaDB Test-Datenbank
+* echte JdbcTemplate Persistenzprüfung
 
 Bewusste Projektentscheidung:
 
@@ -488,77 +542,13 @@ keine Testcontainers
 
 Begründung:
 
-- Einzelentwicklerprojekt
-- pragmatischer Wartungsaufwand
-- produktionsnahe Testumgebung über dedizierte TEST DB
-
-### Aktueller Backend-Teststand
-
-#### Unit / bestehende Tests
-
-- `AuthControllerTest`
-- `AdminSecurityTest`
-- `AdminUserControllerTest`
-- `SystemInfoControllerTest`
-- bestehende Member-/Validierungs-Tests
-
-#### Integration Tests
-
-**Phase 1**
-
-- `AuthSessionIntegrationTest`
-- `AuthorizationIntegrationTest`
-- `MemberReadIntegrationTest`
-- `MemberWriteIntegrationTest`
-
-Abgedeckter Scope:
-
-- Login
-- Logout
-- Session Restore (`/api/auth/me`)
-- Rollenbasierte Autorisierung
-- Mitglieder lesen
-- Mitglieder schreiben
-- echte Persistenzprüfung via JdbcTemplate
-
-**Phase 2**
-
-- `AdminUserIntegrationTest`
-- `UserLoginStateIntegrationTest`
-
-Zusätzlicher Scope:
-
-- Admin Userliste
-- Admin Benutzer anlegen
-- Rollenänderung
-- aktiv/inaktiv setzen
-- Passwortänderung
-- Login-Sperre für deaktivierte Benutzer
-- Passwortwechsel-Verifikation
-- Admin-Endpunkt-Autorisierung
-
-**Phase 3**
-
-- `MemberCreateIntegrationTest`
-
-Zusätzlicher Scope:
-
-- Mitglied anlegen
-- Mitgliedsnummernvergabe
-- Anlage abhängiger Datensätze
-- Default-Datensatzinitialisierung
-- Rollback / Transaktionsverhalten
-- Create-Autorisierung
-
-Aktueller Integrations-Teststand:
-
-```text
-29 Integration Tests
-```
+* Einzelentwicklerprojekt
+* pragmatischer Wartungsaufwand
+* produktionsnahe Testumgebung über dedizierte TEST DB
 
 ### Test-Infrastruktur
 
-Spring Test Profil:
+Spring Test-Profil:
 
 ```text
 application-test.properties
@@ -572,20 +562,54 @@ emc_mitglieder_test
 
 Definierte Testuser:
 
-- `it_admin`
-- `it_editor`
-- `it_viewer`
+* `it_admin`
+* `it_editor`
+* `it_viewer`
 
 Definierte Testmitglieder:
 
-- `N1001`
-- `N1002`
+* `N1001`
+* `N1002`
 
-Hinweis:
+### Aktueller Testumfang
 
-Write-Integrationtests setzen geänderte Testdaten zurück, damit die Gesamttest-Suite stabil reproduzierbar bleibt.
+Controller / Slice Tests:
 
-### Ausführen
+* `AuthControllerTest`
+* `AdminSecurityTest`
+* `AdminUserControllerTest`
+* `SystemInfoControllerTest`
+* bestehende Member- und Validierungstests
+
+Integration Tests:
+
+* `AuthSessionIntegrationTest`
+* `AuthorizationIntegrationTest`
+* `MemberReadIntegrationTest`
+* `MemberWriteIntegrationTest`
+* `AdminUserIntegrationTest`
+* `UserLoginStateIntegrationTest`
+* `MemberCreateIntegrationTest`
+* `ActuatorHealthIntegrationTest`
+
+Zusätzlicher Scope durch Healthcheck-Tests:
+
+* Actuator Health-Endpunkt verfügbar
+* Liveness verfügbar
+* Readiness verfügbar
+* Datenbankstatus wird im Health-Konzept berücksichtigt
+* öffentliche Health-Endpunkte sind ohne Login nutzbar
+
+Aktueller Teststand:
+
+```text
+69 Tests
+0 Fehler
+0 Failures
+0 Skipped
+```
+
+### Tests ausführen
 
 Alle Tests:
 
@@ -601,7 +625,7 @@ mvn clean package
 
 ---
 
-## Build / Deployment
+## 10. Build und Deployment
 
 ### Build
 
@@ -609,25 +633,54 @@ mvn clean package
 mvn clean package
 ```
 
-Der Build erzeugt zusätzlich Spring Boot Build-Metadaten:
+Der Build erzeugt Spring Boot Build-Metadaten:
 
 ```text
 META-INF/build-info.properties
 ```
 
-Diese Metadaten werden für den System-Endpoint verwendet:
+Diese Metadaten werden verwendet für:
 
-```http
-GET /api/system/info
-```
+* Backend-Version
+* Build-Zeitpunkt
+* Systeminformationen
+* Deployment-Nachweise
 
-und liefern die aktuell deployte Backend-Version.
-
-### Docker
+### Docker Build
 
 ```bash
-docker build -t emc-backend .
-docker run -d -p 8080:8080 emc-backend
+docker build -t emc-mitglieder-backend:dev .
+```
+
+Beispiel PROD:
+
+```bash
+docker build -t emc-mitglieder-backend:prod .
+```
+
+### Docker Runtime
+
+Das Backend wird containerisiert auf dem NAS betrieben.
+
+Wichtige Runtime-Variablen:
+
+```text
+DB_URL
+DB_USERNAME
+DB_PASSWORD
+SPRING_PROFILES_ACTIVE
+```
+
+Beispiel DEV:
+
+```text
+SPRING_PROFILES_ACTIVE=dev
+```
+
+Beispiel PROD:
+
+```text
+SPRING_PROFILES_ACTIVE=prod
 ```
 
 ### Zielplattform
@@ -636,62 +689,64 @@ docker run -d -p 8080:8080 emc-backend
 UGREEN NAS DH2300
 ```
 
-Deployment erfolgt containerisiert auf dem NAS.
+Das operative Deployment erfolgt über die standardisierte Infrastruktur in EMC-INFRA.
 
-Details zum operativen Deployment:
-
-siehe Deployment-Handbuch.
+Diese README beschreibt nur die technische Backend-Sicht.
 
 ---
 
-## Projektstatus
+## 11. Dokumentation
 
-### Fertig
+Dieses Repository enthält die technische Implementierung des EMC-Mitgliederverwaltungs-Backends.
 
-- Lookup APIs
-- Mitgliederliste
-- Suche / Filter / Pagination
-- Detailansicht
-- Mitglied anlegen
-- Mitglied aktualisieren
-- Datenschutz
-- Chorkleidung
-- Löschen
-- Global Exception Handling
-- Request-ID Logging
-- Session Auth
-- Rollenmodell
-- Benutzerverwaltung
-- Security Tests
-- Backend Integration Tests Phase 1
-- Backend Integration Tests Phase 2
-- Backend Integration Tests Phase 3
-- System Info Endpoint
-- Build Version Metadata
+Diese README beschreibt:
 
-### Geplant (Phase 4+)
+* technische Architektur
+* relevante Schnittstellen
+* Sicherheitsmodell
+* Datenbankanbindung
+* Betriebsinformationen
+* Healthchecks
+* Teststrategie
+* Build-Grundlagen
 
-Security Hardening:
+Nicht Bestandteil dieser README sind:
 
-- Passwort Lifecycle
-- Initialpasswort
-- Passwortwechsel beim Erstlogin
-- Session Timeout
-- Auto Logout
-- Brute Force Schutz
-- temporäre Sperren
-- Recovery-Konzept Admin
+* Projektsteuerung
+* Roadmap
+* Backlog
+* fachliche Produktplanung
+* operative Infrastrukturdetails
+* Recovery- und Backup-Prozesse
+* Uptime-Kuma-Konfiguration
+* Docker-Compose Source of Truth
 
----
+Zentrale Dokumentationsorte:
 
-## Nicht im MVP
+### EMC-DOKUMENTATION
 
-Derzeit bewusst nicht umgesetzt:
+Zuständig für:
 
-- Ehrungen
-- Funktionen
-- Verteiler
-- Historisierung
-- Berichte
-- Mailversand
-- Exportfunktionen
+* Produktvision
+* Projektstatus
+* Roadmap
+* Backlog
+* Entscheidungen
+* fachliche Dokumentation
+* Produktarchitektur
+* Benutzerhandbuch
+
+### EMC-INFRA
+
+Zuständig für:
+
+* Docker Compose
+* Deployment-Betrieb
+* Monitoring
+* Uptime Kuma
+* Backup
+* Restore
+* Recovery
+* Security
+* Betriebsinventare
+* Infrastruktur-Governance
