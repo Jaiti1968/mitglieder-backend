@@ -8,6 +8,8 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
+
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -32,8 +34,11 @@ class SystemInfoControllerTest {
     }
 
     @Test
-    void shouldReturnBackendVersionWhenAuthenticated() throws Exception {
-        when(buildProperties.getVersion()).thenReturn("1.1.1-SNAPSHOT");
+    void shouldReturnSystemInfoWhenAuthenticated() throws Exception {
+        Instant buildTime = Instant.parse("2026-06-11T10:15:22Z");
+
+        when(buildProperties.getVersion()).thenReturn("1.1.2-SNAPSHOT");
+        when(buildProperties.getTime()).thenReturn(buildTime);
 
         mockMvc.perform(
                         get("/api/system/info")
@@ -41,6 +46,9 @@ class SystemInfoControllerTest {
                 )
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
-                .andExpect(jsonPath("$.backendVersion").value("1.1.1-SNAPSHOT"));
+                .andExpect(jsonPath("$.backendVersion").value("1.1.2-SNAPSHOT"))
+                .andExpect(jsonPath("$.environment").exists())
+                .andExpect(jsonPath("$.activeProfiles").isArray())
+                .andExpect(jsonPath("$.buildTime").value("2026-06-11T10:15:22Z"));
     }
 }
