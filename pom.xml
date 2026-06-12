@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>de.emc</groupId>
 	<artifactId>mitglieder-backend</artifactId>
-	<version>1.1.2-SNAPSHOT</version>
+	<version>1.1.2</version>
 	<name/>
 	<description/>
 	<url/>
