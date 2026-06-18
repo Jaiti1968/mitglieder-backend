@@ -184,7 +184,7 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-                ex.getMessage(),
+                "Ein unerwarteter Fehler ist aufgetreten.",
                 request.getRequestURI(),
                 MDC.get("requestId")
         );

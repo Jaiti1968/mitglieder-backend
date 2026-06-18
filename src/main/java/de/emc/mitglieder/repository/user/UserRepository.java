@@ -110,6 +110,33 @@ public class UserRepository {
         return count != null && count > 0;
     }
 
+    public boolean isActiveAdmin(Long id) {
+        String sql = """
+            SELECT COUNT(*)
+            FROM tblUsers
+            WHERE id = ?
+              AND role = 'ADMIN'
+              AND active = TRUE
+            """;
+
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
+
+        return count != null && count > 0;
+    }
+
+    public int countActiveAdmins() {
+        String sql = """
+            SELECT COUNT(*)
+            FROM tblUsers
+            WHERE role = 'ADMIN'
+              AND active = TRUE
+            """;
+
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class);
+
+        return count != null ? count : 0;
+    }
+
     public void updateRole(Long id, String role) {
         String sql = """
                 UPDATE tblUsers

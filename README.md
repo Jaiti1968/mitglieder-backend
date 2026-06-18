@@ -125,12 +125,29 @@ Implementiert:
 * `last_login_at` Tracking
 * authentifizierter technischer System-Endpoint
 * öffentliche Health-Endpunkte für Monitoring
+* Schutz des letzten aktiven ADMIN-Kontos
+* defensives Fehlerverhalten bei unerwarteten technischen Fehlern
+* Session Timeout
+* gehärtete Session-Cookie-Basiskonfiguration
 
 Bewusst geschützt:
 
 * `/api/system/info` ist authentifiziert.
 * `/api/**` ist grundsätzlich geschützt.
 * Nur `/actuator/health/**` ist öffentlich freigegeben.
+
+### Session- und Cookie-Governance
+
+Die Anwendung verwendet serverseitige Sessions.
+
+Konfiguriert:
+
+* Session Timeout: 30 Minuten
+* `HttpOnly=true`
+* `SameSite=Lax`
+* `Secure=true` im PROD-Profil bei HTTPS-Betrieb
+
+Umgebungsspezifische Cookie-Einstellungen werden nicht buildabhängig gepflegt, sondern über Spring Profile gesteuert.
 
 ---
 
@@ -212,6 +229,16 @@ Abgrenzung:
 | `emc_mitglieder_dev`  | lokale Entwicklung, Frontend, Postman    |
 | `emc_mitglieder_test` | automatisierte Backend-Integrationstests |
 | `emc_mitglieder_prod` | produktiver Betrieb                      |
+
+---
+
+### Datenbankschema
+
+Das Datenbankschema wird aktuell manuell gepflegt.
+
+Die Flyway-Abhängigkeit ist bereits vorbereitet, wird derzeit jedoch noch nicht aktiv für Datenbankmigrationen verwendet.
+
+Eine spätere Nutzung von Flyway für strukturierte Datenbankmigrationen bleibt möglich.
 
 ---
 
@@ -497,6 +524,20 @@ Damit werden keine Details preisgegeben über:
 * deaktivierten Benutzer
 * spätere Sperrmechanismen
 
+### Unerwartete technische Fehler
+
+Unerwartete technische Fehler werden gegenüber Clients neutral beantwortet.
+
+Beispiel:
+
+```text
+Ein unerwarteter Fehler ist aufgetreten.
+```
+
+Technische Details werden ausschließlich im Backend-Log protokolliert.
+
+Dadurch werden keine internen Implementierungsdetails an Clients weitergegeben.
+
 ---
 
 ## 9. Qualitätssicherung und Tests
@@ -603,7 +644,7 @@ Zusätzlicher Scope durch Healthcheck-Tests:
 Aktueller Teststand:
 
 ```text
-69 Tests
+73 Tests
 0 Fehler
 0 Failures
 0 Skipped

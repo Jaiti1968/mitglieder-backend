@@ -52,11 +52,21 @@ public class AdminUserService {
 
     public void updateRole(Long userId, UpdateUserRoleRequest request) {
         ensureUserExists(userId);
+
+        if (!"ADMIN".equals(request.role())) {
+            ensureNotLastActiveAdmin(userId);
+        }
+
         userRepository.updateRole(userId, request.role());
     }
 
     public void updateActive(Long userId, UpdateUserActiveRequest request) {
         ensureUserExists(userId);
+
+        if (!request.active()) {
+            ensureNotLastActiveAdmin(userId);
+        }
+
         userRepository.updateActive(userId, request.active());
     }
 
@@ -76,6 +86,16 @@ public class AdminUserService {
             throw new ResponseStatusException(
                     NOT_FOUND,
                     "Benutzer nicht gefunden"
+            );
+        }
+    }
+
+    private void ensureNotLastActiveAdmin(Long userId) {
+        if (userRepository.isActiveAdmin(userId)
+                && userRepository.countActiveAdmins() <= 1) {
+            throw new ResponseStatusException(
+                    CONFLICT,
+                    "Der letzte aktive Administrator darf nicht deaktiviert oder herabgestuft werden"
             );
         }
     }
