@@ -16,6 +16,7 @@ import org.springframework.security.authentication.LockedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -170,6 +171,29 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 MDC.get("requestId")
         );
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatusException(
+            ResponseStatusException ex,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+
+        log.warn("Fachlicher HTTP-Fehler bei Request {} - {}",
+                request.getRequestURI(),
+                ex.getReason());
+
+        return ResponseEntity
+                .status(status)
+                .body(new ErrorResponse(
+                        LocalDateTime.now(),
+                        status.value(),
+                        status.getReasonPhrase(),
+                        ex.getReason(),
+                        request.getRequestURI(),
+                        MDC.get("requestId")
+                ));
     }
 
     @ExceptionHandler(Exception.class)

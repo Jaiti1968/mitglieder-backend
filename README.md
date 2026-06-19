@@ -538,6 +538,19 @@ Technische Details werden ausschließlich im Backend-Log protokolliert.
 
 Dadurch werden keine internen Implementierungsdetails an Clients weitergegeben.
 
+### Fachliche HTTP-Fehler
+
+Fachliche Fehler werden mit dem passenden HTTP-Statuscode und einer fachlich verständlichen Fehlermeldung beantwortet.
+
+Beispiele:
+
+```text
+404 Nicht gefunden
+409 Konflikt
+```
+
+Diese Fehlermeldungen dürfen an Clients weitergegeben werden, da sie Teil der fachlichen Anwendungslogik sind.
+
 ---
 
 ## 9. Qualitätssicherung und Tests
