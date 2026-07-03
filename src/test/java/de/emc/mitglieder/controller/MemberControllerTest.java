@@ -209,7 +209,8 @@ class MemberControllerTest {
                                 4,
                                 "Kandidat",
                                 6,
-                                "keine"
+                                "keine",
+                                false
                         )
                 ),
                 new PaginationDto(

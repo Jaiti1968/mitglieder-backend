@@ -44,7 +44,8 @@ public class MemberRepository {
                     ms.IDMitgliederstatus,
                     msf.Mitgliederstatus,
                     ms.IDStimme,
-                    sf.Stimme
+                    sf.Stimme,
+                    ms.Kammerchor
                 FROM tblMitglieder m
                 LEFT JOIN tblMitgliedschaft ms
                     ON ms.Mitgliedsnummer = m.Mitgliedsnummer
@@ -107,7 +108,8 @@ public class MemberRepository {
                                 (Integer) rs.getObject("IDMitgliederstatus"),
                                 rs.getString("Mitgliederstatus"),
                                 (Integer) rs.getObject("IDStimme"),
-                                rs.getString("Stimme")
+                                rs.getString("Stimme"),
+                                (Boolean) rs.getObject("Kammerchor")
                         ),
                 params.toArray()
         );

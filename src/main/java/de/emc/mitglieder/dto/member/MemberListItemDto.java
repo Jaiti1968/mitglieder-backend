@@ -18,5 +18,6 @@ public class MemberListItemDto {
     private String mitgliedsstatus;
     private Integer stimmeId;
     private String stimme;
+    private Boolean kammerchor;
 
 }
