@@ -4,7 +4,9 @@
 
 Spring Boot Backend für die Mitgliederverwaltung des EMC Männerchors.
 
-Das Backend stellt eine REST-API für Mitgliederverwaltung, Lookup-Daten, Authentifizierung, rollenbasierte Autorisierung, administrative Benutzerverwaltung sowie technische Betriebsinformationen bereit.
+Das Backend stellt eine REST-API für Mitgliederverwaltung, Lookup-Daten,
+Reporting, Authentifizierung, rollenbasierte Autorisierung,
+administrative Benutzerverwaltung sowie technische Betriebsinformationen bereit.
 
 Die Anwendung nutzt MariaDB als Persistenzschicht, läuft containerisiert auf dem NAS und wird durch ein separates React-Frontend verwendet.
 
@@ -42,6 +44,19 @@ Controller
 → Repository
 → Mapper
 → MariaDB
+```
+
+Für Reportingfunktionen wird dieselbe Schichtenarchitektur verwendet.
+
+Zusätzlich erfolgt eine Trennung zwischen fachlicher Datenaufbereitung und Ausgabeformat:
+
+```text
+ReportingService
+        ↓
+Browser
+PDF
+Excel
+CSV
 ```
 
 ### Controller
@@ -301,6 +316,23 @@ POST /api/admin/users
 PUT /api/admin/users/{id}/role
 PUT /api/admin/users/{id}/active
 PUT /api/admin/users/{id}/password
+```
+
+### Reporting
+
+#### Mitgliederverzeichnis
+
+```http
+POST /api/reporting/members-directory/query
+POST /api/reporting/members-directory/export/pdf
+POST /api/reporting/members-directory/export/excel
+```
+
+#### Geburtstagsliste
+
+```http
+POST /api/reporting/birthday-list/query
+POST /api/reporting/birthday-list/export/pdf
 ```
 
 ---
@@ -634,6 +666,8 @@ Controller / Slice Tests:
 * `AdminUserControllerTest`
 * `SystemInfoControllerTest`
 * bestehende Member- und Validierungstests
+* `BirthdayReportControllerTest`
+* `MembersDirectoryReportControllerTest`
 
 Integration Tests:
 
@@ -657,7 +691,7 @@ Zusätzlicher Scope durch Healthcheck-Tests:
 Aktueller Teststand:
 
 ```text
-73 Tests
+99 Tests
 0 Fehler
 0 Failures
 0 Skipped

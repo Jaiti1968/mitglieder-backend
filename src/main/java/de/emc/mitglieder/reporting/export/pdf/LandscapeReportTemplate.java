@@ -91,7 +91,7 @@ public class LandscapeReportTemplate extends PdfPageEventHelper {
                 0
         );
 
-        float y = document.bottom() - 10;
+        float y = document.bottom() - 15;
 
         ColumnText.showTextAligned(
                 writer.getDirectContent(),

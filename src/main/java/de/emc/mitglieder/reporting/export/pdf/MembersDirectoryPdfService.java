@@ -23,7 +23,7 @@ public class MembersDirectoryPdfService {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         Document document =
-                new Document(PageSize.A4.rotate(), 15, 15, 120, 35);
+                new Document(PageSize.A4.rotate(), 15, 15, 120, 45);
 
         PdfWriter writer =
                 PdfWriter.getInstance(document, outputStream);

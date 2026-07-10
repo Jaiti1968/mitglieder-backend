@@ -2,6 +2,7 @@ package de.emc.mitglieder.reporting.controller;
 
 import de.emc.mitglieder.reporting.dto.BirthdayReportMonthGroupDto;
 import de.emc.mitglieder.reporting.dto.BirthdayReportResponse;
+import de.emc.mitglieder.reporting.export.pdf.BirthdayReportPdfService;
 import de.emc.mitglieder.reporting.service.BirthdayReportService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,9 @@ class BirthdayReportControllerTest {
 
     @MockitoBean
     private BirthdayReportService birthdayReportService;
+
+    @MockitoBean
+    private BirthdayReportPdfService birthdayReportPdfService;
 
     @Test
     void query_shouldReturnBirthdayReportResponse() throws Exception {
