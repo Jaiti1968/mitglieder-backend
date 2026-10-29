@@ -5,6 +5,7 @@ import de.emc.mitglieder.dto.member.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.sql.Date;
 
 public final class MemberMapper {
 
@@ -57,10 +58,11 @@ public final class MemberMapper {
         );
     }
 
-    private static LocalDate toLocalDate(ResultSet rs, String columnName) throws SQLException {
-        return rs.getTimestamp(columnName) != null
-                ? rs.getDate(columnName).toLocalDate()
-                : null;
+    private static LocalDate toLocalDate(
+            ResultSet rs, String columnName
+    ) throws SQLException {
+        Date date = rs.getDate(columnName);
+        return date != null ? date.toLocalDate() : null;
     }
 
     public static MemberDatenschutzDto mapDatenschutz(ResultSet rs) throws SQLException {
