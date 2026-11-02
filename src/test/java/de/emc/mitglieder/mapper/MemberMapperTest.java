@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.ResultSet;
-import java.sql.Timestamp;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -225,11 +224,10 @@ class MemberMapperTest {
     }
 
     private static void mockDate(ResultSet rs, String columnName, LocalDate value) throws Exception {
-        when(rs.getTimestamp(columnName)).thenReturn(Timestamp.valueOf(value.atStartOfDay()));
         when(rs.getDate(columnName)).thenReturn(Date.valueOf(value));
     }
 
     private static void mockNullDate(ResultSet rs, String columnName) throws Exception {
-        when(rs.getTimestamp(columnName)).thenReturn(null);
+        when(rs.getDate(columnName)).thenReturn(null);
     }
 }
