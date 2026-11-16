@@ -22,4 +22,8 @@ public class LookupService {
     public List<LookupItemDto> getVoices() {
         return lookupRepository.findVoices();
     }
+
+    public List<LookupItemDto> getHonors() {
+        return lookupRepository.findHonors();
+    }
 }

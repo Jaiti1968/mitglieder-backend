@@ -49,6 +49,23 @@ public class LookupRepository {
         );
     }
 
+    public List<LookupItemDto> findHonors() {
+        String sql = """
+            SELECT
+                IDEhrungen,
+                Ehrungen
+            FROM tblEhrungen_FT
+            ORDER BY IDEhrungen
+            """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+                new LookupItemDto(
+                        rs.getInt("IDEhrungen"),
+                        rs.getString("Ehrungen")
+                )
+        );
+    }
+
     public boolean existsMemberStatus(Integer id) {
         String sql = """
                 SELECT COUNT(*)
