@@ -123,8 +123,15 @@ Ablauf:
 | Mitglieder lesen    |     ✅ |      ✅ |      ✅ |
 | Mitglied anlegen    |     ✅ |      ✅ |      ❌ |
 | Mitglied ändern     |     ✅ |      ✅ |      ❌ |
-| Mitglied löschen    |     ✅ |      ❌ |      ❌ |
+| Mitglied löschen    |     — |      — |      — |
+| Ehrungen lesen      |     ✅ |      ✅ |      ✅ |
+| Ehrung anlegen      |     ✅ |      ✅ |      ❌ |
+| Ehrung bearbeiten   |     ✅ |      ✅ |      ❌ |
+| Ehrung löschen      |     ✅ |      ✅ |      ❌ |
 | Benutzerverwaltung  |     ✅ |      ❌ |      ❌ |
+| Reporting           |     ✅ |      ❌ |      ❌ |
+
+Das Löschen einer Ehrung ist separat berechtigt. Für das Löschen eines Mitglieds enthält `SecurityConfig` eine `ADMIN`-Regel, im aktuellen `MemberController` ist jedoch kein entsprechender DELETE-Endpunkt implementiert. Die Zeile „Mitglied löschen“ bezeichnet deshalb keine derzeit verfügbare API-Funktion.
 
 ### Technischer Sicherheitsstand
 
@@ -149,7 +156,9 @@ Bewusst geschützt:
 
 * `/api/system/info` ist authentifiziert.
 * `/api/**` ist grundsätzlich geschützt.
-* Nur `/actuator/health/**` ist öffentlich freigegeben.
+* `/api/auth/login` und `/actuator/health/**` sind ausdrücklich ohne Anmeldung erreichbar.
+* Für nicht anderweitig erfasste Pfade gilt derzeit `anyRequest().permitAll()`; beispielsweise ist `/api/hello` öffentlich erreichbar.
+* CSRF-Schutz ist derzeit in `SecurityConfig` deaktiviert (`csrf.disable()`). Bei sessionbasierter Authentifizierung ist dies ein gesondert zu bewertender Sicherheitsaspekt.
 
 ### Session- und Cookie-Governance
 
@@ -160,9 +169,9 @@ Konfiguriert:
 * Session Timeout: 30 Minuten
 * `HttpOnly=true`
 * `SameSite=Lax`
-* `Secure=true` im PROD-Profil bei HTTPS-Betrieb
+* `Secure=false` im aktuellen PROD-Profil (`application-prod.properties`), da HTTPS noch nicht eingeführt ist
 
-Umgebungsspezifische Cookie-Einstellungen werden nicht buildabhängig gepflegt, sondern über Spring Profile gesteuert.
+Umgebungsspezifische Cookie-Einstellungen werden über Spring-Profile gesteuert. Die HTTPS-Einführung ist als **BL-026** im Backlog vorgesehen. Im Zuge dieser Umsetzung muss insbesondere `Secure=true` für den HTTPS-Betrieb geprüft und eingerichtet werden.
 
 ---
 
@@ -199,6 +208,10 @@ Mitgliederdaten:
 * `tblDatenschutz`
 * `tblChorkleidung`
 
+Ehrungen eines Mitglieds:
+
+* `tblEhrungen` – Zuordnung über `Mitgliedsnummer`; einzelne Ehrung über `IDTabEhrungen` identifiziert
+
 Benutzerverwaltung:
 
 ```text
@@ -221,7 +234,10 @@ Lookup-Tabellen:
 
 * `tblMitgliederstatus_FT`
 * `tblStimme_FT`
+* `tblEhrungen_FT` – Ehrungsarten (`IDEhrungen`, `Ehrungen`)
 * `tblAllgemein_FT`
+
+Die Ehrungsart wird gegen `tblEhrungen_FT` geprüft (`existsHonorTypeById`). Funktionen und Verteiler werden hier erst nach ihrer Backend-Implementierung ergänzt.
 
 ### Test-Datenbank
 
@@ -273,6 +289,7 @@ GET  /api/system/info
 ```http
 GET /api/lookups/member-status
 GET /api/lookups/voices
+GET /api/lookups/honors
 ```
 
 ### Mitglieder
@@ -284,10 +301,22 @@ POST   /api/members
 PUT    /api/members/{mitgliedsnummer}/stammdaten
 PUT    /api/members/{mitgliedsnummer}/kontakt
 PUT    /api/members/{mitgliedsnummer}/mitgliedschaft
+GET    /api/members/{mitgliedsnummer}/datenschutz
 PUT    /api/members/{mitgliedsnummer}/datenschutz
+GET    /api/members/{mitgliedsnummer}/chorkleidung
 PUT    /api/members/{mitgliedsnummer}/chorkleidung
-DELETE /api/members/{mitgliedsnummer}
 ```
+
+### Ehrungen (BL-009)
+
+```http
+GET    /api/members/{mitgliedsnummer}/honors
+POST   /api/members/{mitgliedsnummer}/honors
+PUT    /api/members/{mitgliedsnummer}/honors/{honorId}
+DELETE /api/members/{mitgliedsnummer}/honors/{honorId}
+```
+
+Alle Operationen sind an die angegebene Mitgliedsnummer gebunden. Eine Ehrung kann nicht über die Mitgliedsnummer eines anderen Mitglieds geändert oder gelöscht werden. Erfolgreiches Löschen liefert `204 No Content`; ein nicht vorhandenes Mitglied oder eine nicht zugeordnete Ehrung führt zu `404 Not Found`. Die feldbezogenen Regeln und weiteren Fehlerfälle werden im `Validierungskatalog_Backend.md` beschrieben.
 
 ### Mitgliederliste Filter
 
@@ -347,16 +376,16 @@ Das Backend stellt einen authentifizierten System-Endpoint bereit:
 GET /api/system/info
 ```
 
-Beispiel:
+Schematisches Beispiel (Versionswert ist ein Platzhalter):
 
 ```json
 {
-  "backendVersion": "1.1.2-SNAPSHOT",
+  "backendVersion": "<aktuelle Backend-Version>",
   "environment": "DEV",
   "activeProfiles": [
     "dev"
   ],
-  "buildTime": "2026-06-11T12:48:17.103Z"
+  "buildTime": "<Build-Zeitpunkt im ISO-8601-Format>"
 }
 ```
 
@@ -657,59 +686,59 @@ Definierte Testmitglieder:
 * `N1001`
 * `N1002`
 
-### Aktueller Testumfang
+### Testumfang
 
-Controller / Slice Tests:
+Die automatisierten Tests decken unter anderem folgende Bereiche ab:
 
-* `AuthControllerTest`
-* `AdminSecurityTest`
-* `AdminUserControllerTest`
-* `SystemInfoControllerTest`
-* bestehende Member- und Validierungstests
-* `BirthdayReportControllerTest`
-* `MembersDirectoryReportControllerTest`
+* Authentifizierung, Sessions, Rollen und administrative Benutzerverwaltung
+* Mitglieder lesen, anlegen und bearbeiten sowie Mapping und Service-Logik
+* BL-009 Ehrungen: Lesen, Anlegen, Bearbeiten und Löschen einschließlich Repository-, Service- und API-Integrationstests
+* Reporting: Mitgliederverzeichnis, Geburtstagsliste, Berechnungen und Berechtigungen
+* Systeminformationen, Healthchecks und Datenbankanbindung
 
-Integration Tests:
+Für BL-009 sind folgende Testklassen vorhanden:
 
-* `AuthSessionIntegrationTest`
-* `AuthorizationIntegrationTest`
-* `MemberReadIntegrationTest`
-* `MemberWriteIntegrationTest`
-* `AdminUserIntegrationTest`
-* `UserLoginStateIntegrationTest`
-* `MemberCreateIntegrationTest`
-* `ActuatorHealthIntegrationTest`
+* `MemberHonorReadIntegrationTest`
+* `MemberHonorCreateIntegrationTest`
+* `MemberHonorUpdateIntegrationTest`
+* `MemberHonorDeleteIntegrationTest`
+* `MemberHonorRepositoryIntegrationTest`
+* `MemberHonorServiceTest`
 
-Zusätzlicher Scope durch Healthcheck-Tests:
+Die vollständige Liste der Testklassen ergibt sich aus `src/test/java` und wird nicht dauerhaft in dieser README dupliziert.
 
-* Actuator Health-Endpunkt verfügbar
-* Liveness verfügbar
-* Readiness verfügbar
-* Datenbankstatus wird im Health-Konzept berücksichtigt
-* öffentliche Health-Endpunkte sind ohne Login nutzbar
-
-Aktueller Teststand:
+Letzter verifizierter Teststand nach Abschluss der BL-009-Backend-Implementierung (Momentaufnahme):
 
 ```text
-99 Tests
+29 Testklassen
+162 Tests
 0 Fehler
-0 Failures
-0 Skipped
+0 fehlgeschlagene Tests
+0 übersprungene Tests
+BUILD SUCCESS
+```
+
+Prüfbefehl unter Windows:
+
+```powershell
+.\mvnw.cmd clean verify
 ```
 
 ### Tests ausführen
 
-Alle Tests:
+Tests unter Windows:
 
-```bash
-mvn test
+```powershell
+.\mvnw.cmd test
 ```
 
-Vollständiger Build:
+Vollständiger Prüf-Build unter Windows:
 
-```bash
-mvn clean package
+```powershell
+.\mvnw.cmd clean verify
 ```
+
+Alternativ mit installiertem Maven: `mvn test` beziehungsweise `mvn clean verify`.
 
 ---
 
@@ -717,9 +746,13 @@ mvn clean package
 
 ### Build
 
-```bash
-mvn clean package
+Vollständiger Prüf-Build unter Windows:
+
+```powershell
+.\mvnw.cmd clean verify
 ```
+
+Ein Paket-Build ist alternativ mit `mvn clean package` möglich. Die Projektversion wird in der `pom.xml` geführt (zum Zeitpunkt des Codeabgleichs: `1.3.0-SNAPSHOT`).
 
 Der Build erzeugt Spring Boot Build-Metadaten:
 
@@ -734,21 +767,13 @@ Diese Metadaten werden verwendet für:
 * Systeminformationen
 * Deployment-Nachweise
 
-### Docker Build
+### Docker Build und Deployment
 
-```bash
-docker build -t emc-mitglieder-backend:dev .
-```
+Das Backend wird als Docker-Container auf dem NAS betrieben. Die Images werden versioniert; starre Beispiel-Tags wie `dev` und `prod` sind deshalb keine verbindliche Build-Anweisung.
 
-Beispiel PROD:
-
-```bash
-docker build -t emc-mitglieder-backend:prod .
-```
+Für die jeweils gültigen Docker-Build-, Image-Tagging- und Deployment-Schritte sind bis zur ausstehenden Dokumentationskonsolidierung **EMC-INFRA und EMC-DOKUMENTATION** heranzuziehen. Diese README enthält bewusst keine zweite operative Deployment-Anleitung.
 
 ### Docker Runtime
-
-Das Backend wird containerisiert auf dem NAS betrieben.
 
 Wichtige Runtime-Variablen:
 
@@ -759,17 +784,7 @@ DB_PASSWORD
 SPRING_PROFILES_ACTIVE
 ```
 
-Beispiel DEV:
-
-```text
-SPRING_PROFILES_ACTIVE=dev
-```
-
-Beispiel PROD:
-
-```text
-SPRING_PROFILES_ACTIVE=prod
-```
+Spring-Profile unterscheiden die Laufzeitumgebungen, beispielsweise `dev` und `prod`.
 
 ### Zielplattform
 
@@ -777,64 +792,14 @@ SPRING_PROFILES_ACTIVE=prod
 UGREEN NAS DH2300
 ```
 
-Das operative Deployment erfolgt über die standardisierte Infrastruktur in EMC-INFRA.
-
-Diese README beschreibt nur die technische Backend-Sicht.
+Die konkreten Betriebs- und Infrastrukturvorgaben werden in den beiden genannten Dokumentations-Repositories gepflegt.
 
 ---
 
 ## 11. Dokumentation
 
-Dieses Repository enthält die technische Implementierung des EMC-Mitgliederverwaltungs-Backends.
+Dieses Repository enthält die technische Implementierung des EMC-Mitgliederverwaltungs-Backends. Die README dient als Einstieg in die Backend-Architektur und beschreibt die wichtigsten Schnittstellen, Berechtigungen, Datenbankbereiche, Betriebsinformationen, Tests und Build-Grundlagen.
 
-Diese README beschreibt:
+Weiterführende Projekt-, Architektur- und Betriebsdokumentation befindet sich derzeit in **EMC-DOKUMENTATION** und **EMC-INFRA**. Eine Konsolidierung dieser beiden Dokumentationsbestände ist noch vorgesehen. Bis dahin verweist die README auf beide Repositories, ohne eine endgültige Zuständigkeitsverteilung vorwegzunehmen.
 
-* technische Architektur
-* relevante Schnittstellen
-* Sicherheitsmodell
-* Datenbankanbindung
-* Betriebsinformationen
-* Healthchecks
-* Teststrategie
-* Build-Grundlagen
-
-Nicht Bestandteil dieser README sind:
-
-* Projektsteuerung
-* Roadmap
-* Backlog
-* fachliche Produktplanung
-* operative Infrastrukturdetails
-* Recovery- und Backup-Prozesse
-* Uptime-Kuma-Konfiguration
-* Docker-Compose Source of Truth
-
-Zentrale Dokumentationsorte:
-
-### EMC-DOKUMENTATION
-
-Zuständig für:
-
-* Produktvision
-* Projektstatus
-* Roadmap
-* Backlog
-* Entscheidungen
-* fachliche Dokumentation
-* Produktarchitektur
-* Benutzerhandbuch
-
-### EMC-INFRA
-
-Zuständig für:
-
-* Docker Compose
-* Deployment-Betrieb
-* Monitoring
-* Uptime Kuma
-* Backup
-* Restore
-* Recovery
-* Security
-* Betriebsinventare
-* Infrastruktur-Governance
+Operative Details wie Docker Compose, Monitoring, Backup, Restore und Recovery werden nicht parallel in dieser README gepflegt.
