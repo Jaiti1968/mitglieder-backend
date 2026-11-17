@@ -340,4 +340,433 @@ class MemberHonorServiceTest {
         );
     }
 
+    @Test
+    void updateHonor_shouldUpdateDateWithoutChangingHonorType() {
+        String mitgliedsnummer = "N1234";
+        int honorId = 330;
+        int honorTypeId = 5;
+        LocalDate newDate = LocalDate.of(2026, 11, 17);
+
+        CreateMemberHonorRequest request = new CreateMemberHonorRequest();
+        request.setHonorTypeId(honorTypeId);
+        request.setHonorDate(newDate);
+
+        MemberHonorDto existingHonor = new MemberHonorDto(
+                honorId,
+                mitgliedsnummer,
+                honorTypeId,
+                "30 Jahre singen im EMC",
+                LocalDate.of(2019, 3, 16)
+        );
+
+        MemberHonorDto updatedHonor = new MemberHonorDto(
+                honorId,
+                mitgliedsnummer,
+                honorTypeId,
+                "30 Jahre singen im EMC",
+                newDate
+        );
+
+        when(memberRepository.existsByMitgliedsnummer(mitgliedsnummer))
+                .thenReturn(true);
+
+        when(memberHonorRepository.findByHonorIdAndMitgliedsnummer(
+                honorId, mitgliedsnummer
+        ))
+                .thenReturn(Optional.of(existingHonor))
+                .thenReturn(Optional.of(updatedHonor));
+
+
+        when(lookupRepository.existsHonorTypeById(honorTypeId))
+                .thenReturn(true);
+
+        when(memberHonorRepository.updateHonor(
+                honorId, mitgliedsnummer, honorTypeId, newDate
+        )).thenReturn(1);
+
+        MemberHonorDto result = memberHonorService.updateHonor(
+                mitgliedsnummer, honorId, request
+        );
+
+        assertThat(result).isEqualTo(updatedHonor);
+
+        verify(memberHonorRepository).updateHonor(
+                honorId, mitgliedsnummer, honorTypeId, newDate
+        );
+
+        verify(memberHonorRepository, never())
+                .existsByMitgliedsnummerAndHonorTypeId(
+                        anyString(), anyInt()
+                );
+    }
+
+    @Test
+    void updateHonor_shouldRejectDuplicateHonorType() {
+        String mitgliedsnummer = "N1234";
+        int honorId = 330;
+
+        CreateMemberHonorRequest request = new CreateMemberHonorRequest();
+        request.setHonorTypeId(6);
+        request.setHonorDate(LocalDate.of(2026, 11, 17));
+
+        MemberHonorDto existingHonor = new MemberHonorDto(
+                honorId,
+                mitgliedsnummer,
+                5,
+                "30 Jahre singen im EMC",
+                LocalDate.of(2019, 3, 16)
+        );
+
+        when(memberRepository.existsByMitgliedsnummer(mitgliedsnummer))
+                .thenReturn(true);
+
+        when(memberHonorRepository.findByHonorIdAndMitgliedsnummer(
+                honorId, mitgliedsnummer
+        )).thenReturn(Optional.of(existingHonor));
+
+        when(lookupRepository.existsHonorTypeById(6))
+                .thenReturn(true);
+
+        when(memberHonorRepository.existsByMitgliedsnummerAndHonorTypeId(
+                mitgliedsnummer, 6
+        )).thenReturn(true);
+
+        assertThatThrownBy(() ->
+                memberHonorService.updateHonor(
+                        mitgliedsnummer, honorId, request
+                )
+        ).isInstanceOfSatisfying(
+                ResponseStatusException.class,
+                ex -> assertThat(ex.getStatusCode())
+                        .isEqualTo(HttpStatus.CONFLICT)
+        );
+
+        verify(memberHonorRepository, never()).updateHonor(
+                anyInt(), anyString(), anyInt(), any()
+        );
+    }
+
+    @Test
+    void updateHonor_shouldAllowChangingHonorType() {
+        String mitgliedsnummer = "N1234";
+        int honorId = 330;
+        int newHonorTypeId = 6;
+        LocalDate newDate = LocalDate.of(2026, 11, 17);
+
+        CreateMemberHonorRequest request = new CreateMemberHonorRequest();
+        request.setHonorTypeId(newHonorTypeId);
+        request.setHonorDate(newDate);
+
+        MemberHonorDto existingHonor = new MemberHonorDto(
+                honorId,
+                mitgliedsnummer,
+                5,
+                "30 Jahre singen im EMC",
+                LocalDate.of(2019, 3, 16)
+        );
+
+        MemberHonorDto updatedHonor = new MemberHonorDto(
+                honorId,
+                mitgliedsnummer,
+                newHonorTypeId,
+                "Neue Ehrungsart",
+                newDate
+        );
+
+        when(memberRepository.existsByMitgliedsnummer(mitgliedsnummer))
+                .thenReturn(true);
+
+        when(memberHonorRepository.findByHonorIdAndMitgliedsnummer(
+                honorId, mitgliedsnummer
+        ))
+                .thenReturn(Optional.of(existingHonor))
+                .thenReturn(Optional.of(updatedHonor)
+        );
+
+        when(lookupRepository.existsHonorTypeById(newHonorTypeId))
+                .thenReturn(true);
+
+        when(memberHonorRepository.existsByMitgliedsnummerAndHonorTypeId(
+                mitgliedsnummer, newHonorTypeId
+        )).thenReturn(false);
+
+        when(memberHonorRepository.updateHonor(
+                honorId, mitgliedsnummer, newHonorTypeId, newDate
+        )).thenReturn(1);
+
+        MemberHonorDto result = memberHonorService.updateHonor(
+                mitgliedsnummer, honorId, request
+        );
+
+        assertThat(result).isEqualTo(updatedHonor);
+
+        verify(memberHonorRepository)
+                .existsByMitgliedsnummerAndHonorTypeId(
+                        mitgliedsnummer, newHonorTypeId
+                );
+
+        verify(memberHonorRepository).updateHonor(
+                honorId, mitgliedsnummer, newHonorTypeId, newDate
+        );
+    }
+
+    @Test
+    void updateHonor_shouldThrowWhenMemberDoesNotExist() {
+        String mitgliedsnummer = "N5000";
+        int honorId = 330;
+
+        CreateMemberHonorRequest request = new CreateMemberHonorRequest();
+        request.setHonorTypeId(5);
+        request.setHonorDate(LocalDate.of(2026, 11, 17));
+
+        when(memberRepository.existsByMitgliedsnummer(mitgliedsnummer))
+                .thenReturn(false);
+
+        assertThatThrownBy(() ->
+                memberHonorService.updateHonor(
+                        mitgliedsnummer, honorId, request
+                )
+        )
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining(mitgliedsnummer);
+
+        verify(memberRepository)
+                .existsByMitgliedsnummer(mitgliedsnummer);
+
+        verifyNoInteractions(
+                lookupRepository,
+                memberHonorRepository
+        );
+    }
+
+    @Test
+    void updateHonor_shouldThrowWhenHonorDoesNotBelongToMember() {
+        String mitgliedsnummer = "N1234";
+        int honorId = 330;
+
+        CreateMemberHonorRequest request = new CreateMemberHonorRequest();
+        request.setHonorTypeId(5);
+        request.setHonorDate(LocalDate.of(2026, 11, 17));
+
+        when(memberRepository.existsByMitgliedsnummer(mitgliedsnummer))
+                .thenReturn(true);
+
+        when(memberHonorRepository.findByHonorIdAndMitgliedsnummer(
+                honorId, mitgliedsnummer
+        )).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                memberHonorService.updateHonor(
+                        mitgliedsnummer, honorId, request
+                )
+        )
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Ehrung");
+
+        verify(memberHonorRepository)
+                .findByHonorIdAndMitgliedsnummer(
+                        honorId, mitgliedsnummer
+                );
+
+        verifyNoInteractions(lookupRepository);
+
+        verify(memberHonorRepository, never()).updateHonor(
+                anyInt(), anyString(), anyInt(), any()
+        );
+    }
+
+    @Test
+    void updateHonor_shouldThrowWhenHonorTypeDoesNotExist() {
+        String mitgliedsnummer = "N1234";
+        int honorId = 330;
+        int invalidHonorTypeId = 9999;
+
+        CreateMemberHonorRequest request = new CreateMemberHonorRequest();
+        request.setHonorTypeId(invalidHonorTypeId);
+        request.setHonorDate(LocalDate.of(2026, 11, 17));
+
+        MemberHonorDto existingHonor = new MemberHonorDto(
+                honorId,
+                mitgliedsnummer,
+                5,
+                "30 Jahre singen im EMC",
+                LocalDate.of(2019, 3, 16)
+        );
+
+        when(memberRepository.existsByMitgliedsnummer(mitgliedsnummer))
+                .thenReturn(true);
+
+        when(memberHonorRepository.findByHonorIdAndMitgliedsnummer(
+                honorId, mitgliedsnummer
+        )).thenReturn(Optional.of(existingHonor));
+
+        when(lookupRepository.existsHonorTypeById(invalidHonorTypeId))
+                .thenReturn(false);
+
+        assertThatThrownBy(() ->
+                memberHonorService.updateHonor(
+                        mitgliedsnummer, honorId, request
+                )
+        )
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Ehrungsart");
+
+        verify(lookupRepository)
+                .existsHonorTypeById(invalidHonorTypeId);
+
+        verify(memberHonorRepository, never()).updateHonor(
+                anyInt(), anyString(), anyInt(), any()
+        );
+    }
+
+    @Test
+    void updateHonor_shouldAllowRemovingHonorDate() {
+        String mitgliedsnummer = "N1234";
+        int honorId = 330;
+        int honorTypeId = 5;
+
+        CreateMemberHonorRequest request = new CreateMemberHonorRequest();
+        request.setHonorTypeId(honorTypeId);
+        request.setHonorDate(null);
+
+        MemberHonorDto existingHonor = new MemberHonorDto(
+                honorId,
+                mitgliedsnummer,
+                honorTypeId,
+                "30 Jahre singen im EMC",
+                LocalDate.of(2019, 3, 16)
+        );
+
+        MemberHonorDto updatedHonor = new MemberHonorDto(
+                honorId,
+                mitgliedsnummer,
+                honorTypeId,
+                "30 Jahre singen im EMC",
+                null
+        );
+
+        when(memberRepository.existsByMitgliedsnummer(mitgliedsnummer))
+                .thenReturn(true);
+
+        when(memberHonorRepository.findByHonorIdAndMitgliedsnummer(
+                honorId, mitgliedsnummer
+        ))
+                .thenReturn(Optional.of(existingHonor))
+                .thenReturn(Optional.of(updatedHonor)
+        );
+
+        when(lookupRepository.existsHonorTypeById(honorTypeId))
+                .thenReturn(true);
+
+        when(memberHonorRepository.updateHonor(
+                honorId, mitgliedsnummer, honorTypeId, null
+        )).thenReturn(1);
+
+        MemberHonorDto result = memberHonorService.updateHonor(
+                mitgliedsnummer, honorId, request
+        );
+
+        assertThat(result).isEqualTo(updatedHonor);
+        assertThat(result.getHonorDate()).isNull();
+
+        verify(memberHonorRepository).updateHonor(
+                honorId, mitgliedsnummer, honorTypeId, null
+        );
+    }
+
+    @Test
+    void updateHonor_shouldAllowFutureHonorDate() {
+        String mitgliedsnummer = "N1234";
+        int honorId = 330;
+        int honorTypeId = 5;
+        LocalDate futureDate = LocalDate.of(2030, 6, 15);
+
+        CreateMemberHonorRequest request = new CreateMemberHonorRequest();
+        request.setHonorTypeId(honorTypeId);
+        request.setHonorDate(futureDate);
+
+        MemberHonorDto existingHonor = new MemberHonorDto(
+                honorId,
+                mitgliedsnummer,
+                honorTypeId,
+                "30 Jahre singen im EMC",
+                LocalDate.of(2019, 3, 16)
+        );
+
+        MemberHonorDto updatedHonor = new MemberHonorDto(
+                honorId,
+                mitgliedsnummer,
+                honorTypeId,
+                "30 Jahre singen im EMC",
+                futureDate
+        );
+
+        when(memberRepository.existsByMitgliedsnummer(mitgliedsnummer))
+                .thenReturn(true);
+
+        when(memberHonorRepository.findByHonorIdAndMitgliedsnummer(
+                honorId, mitgliedsnummer
+        ))
+                .thenReturn(Optional.of(existingHonor))
+                .thenReturn(Optional.of(updatedHonor)
+        );
+
+        when(lookupRepository.existsHonorTypeById(honorTypeId))
+                .thenReturn(true);
+
+        when(memberHonorRepository.updateHonor(
+                honorId, mitgliedsnummer, honorTypeId, futureDate
+        )).thenReturn(1);
+
+        MemberHonorDto result = memberHonorService.updateHonor(
+                mitgliedsnummer, honorId, request
+        );
+
+        assertThat(result).isEqualTo(updatedHonor);
+        assertThat(result.getHonorDate()).isEqualTo(futureDate);
+
+        verify(memberHonorRepository).updateHonor(
+                honorId, mitgliedsnummer, honorTypeId, futureDate
+        );
+    }
+
+    @Test
+    void updateHonor_shouldRejectMissingHonorType() {
+        String mitgliedsnummer = "N1234";
+        int honorId = 330;
+
+        CreateMemberHonorRequest request = new CreateMemberHonorRequest();
+        request.setHonorTypeId(null);
+        request.setHonorDate(LocalDate.of(2026, 11, 17));
+
+        MemberHonorDto existingHonor = new MemberHonorDto(
+                honorId,
+                mitgliedsnummer,
+                5,
+                "30 Jahre singen im EMC",
+                LocalDate.of(2019, 3, 16)
+        );
+
+        when(memberRepository.existsByMitgliedsnummer(mitgliedsnummer))
+                .thenReturn(true);
+
+        when(memberHonorRepository.findByHonorIdAndMitgliedsnummer(
+                honorId, mitgliedsnummer
+        )).thenReturn(Optional.of(existingHonor));
+
+        assertThatThrownBy(() ->
+                memberHonorService.updateHonor(
+                        mitgliedsnummer, honorId, request
+                )
+        )
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Ehrungsart");
+
+        verifyNoInteractions(lookupRepository);
+
+        verify(memberHonorRepository, never()).updateHonor(
+                anyInt(), anyString(), anyInt(), any()
+        );
+    }
+
 }

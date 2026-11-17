@@ -1,4 +1,3 @@
-
 package de.emc.mitglieder.service.member;
 
 import de.emc.mitglieder.dto.member.MemberHonorDto;
@@ -89,6 +88,69 @@ public class MemberHonorService {
                 )
                 .orElseThrow(() -> new IllegalStateException(
                         "Die neu angelegte Ehrung konnte nicht gelesen werden."
+                ));
+    }
+
+    public MemberHonorDto updateHonor(
+            String mitgliedsnummer,
+            int honorId,
+            CreateMemberHonorRequest request
+    ) {
+        if (!memberRepository.existsByMitgliedsnummer(mitgliedsnummer)) {
+            throw new NotFoundException(
+                    "Mitglied mit Nummer " + mitgliedsnummer
+                            + " wurde nicht gefunden."
+            );
+        }
+
+        MemberHonorDto existingHonor = memberHonorRepository
+                .findByHonorIdAndMitgliedsnummer(honorId, mitgliedsnummer)
+                .orElseThrow(() -> new NotFoundException(
+                        "Die Ehrung wurde für dieses Mitglied nicht gefunden."
+                ));
+
+        Integer honorTypeId = request.getHonorTypeId();
+
+        if (honorTypeId == null) {
+            throw new BadRequestException(
+                    "Die Ehrungsart muss angegeben werden."
+            );
+        }
+
+        if (!lookupRepository.existsHonorTypeById(honorTypeId)) {
+            throw new BadRequestException(
+                    "Die angegebene Ehrungsart existiert nicht."
+            );
+        }
+
+        if (!honorTypeId.equals(existingHonor.getHonorTypeId())
+                && memberHonorRepository.existsByMitgliedsnummerAndHonorTypeId(
+                mitgliedsnummer,
+                honorTypeId
+        )) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Diese Ehrungsart ist dem Mitglied bereits zugeordnet."
+            );
+        }
+
+        int updatedRows = memberHonorRepository.updateHonor(
+                honorId,
+                mitgliedsnummer,
+                honorTypeId,
+                request.getHonorDate()
+        );
+
+        if (updatedRows != 1) {
+            throw new IllegalStateException(
+                    "Die Ehrung konnte nicht aktualisiert werden."
+            );
+        }
+
+        return memberHonorRepository
+                .findByHonorIdAndMitgliedsnummer(honorId, mitgliedsnummer)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Die aktualisierte Ehrung konnte nicht gelesen werden."
                 ));
     }
 

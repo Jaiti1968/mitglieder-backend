@@ -1,4 +1,3 @@
-
 package de.emc.mitglieder.repository.member;
 
 import de.emc.mitglieder.dto.member.MemberHonorDto;
@@ -124,5 +123,63 @@ public class MemberHonorRepository {
                 mitgliedsnummer,
                 honorTypeId
         ).stream().findFirst();
+    }
+
+    public Optional<MemberHonorDto> findByHonorIdAndMitgliedsnummer(
+            int honorId,
+            String mitgliedsnummer
+    ) {
+        String sql = """
+            SELECT
+                e.IDTabEhrungen,
+                e.Mitgliedsnummer,
+                e.IDEhrungen,
+                ft.Ehrungen,
+                e.EhrungenTermin
+            FROM tblEhrungen e
+            INNER JOIN tblEhrungen_FT ft
+                ON ft.IDEhrungen = e.IDEhrungen
+            WHERE e.IDTabEhrungen = ?
+              AND e.Mitgliedsnummer = ?
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> new MemberHonorDto(
+                        rs.getInt("IDTabEhrungen"),
+                        rs.getString("Mitgliedsnummer"),
+                        rs.getInt("IDEhrungen"),
+                        rs.getString("Ehrungen"),
+                        rs.getObject(
+                                "EhrungenTermin",
+                                LocalDate.class
+                        )
+                ),
+                honorId,
+                mitgliedsnummer
+        ).stream().findFirst();
+    }
+
+    public int updateHonor(
+            int honorId,
+            String mitgliedsnummer,
+            int honorTypeId,
+            LocalDate honorDate
+    ) {
+        String sql = """
+            UPDATE tblEhrungen
+            SET IDEhrungen = ?,
+                EhrungenTermin = ?
+            WHERE IDTabEhrungen = ?
+              AND Mitgliedsnummer = ?
+            """;
+
+        return jdbcTemplate.update(
+                sql,
+                honorTypeId,
+                honorDate,
+                honorId,
+                mitgliedsnummer
+        );
     }
 }
