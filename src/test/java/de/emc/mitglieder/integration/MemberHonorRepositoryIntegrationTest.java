@@ -1,4 +1,3 @@
-
 package de.emc.mitglieder.integration;
 
 import de.emc.mitglieder.dto.member.MemberHonorDto;
@@ -9,12 +8,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DuplicateKeyException;
 
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -83,4 +84,92 @@ class MemberHonorRepositoryIntegrationTest {
                 honorDate == null ? null : Date.valueOf(honorDate)
         );
     }
+
+    @Test
+    void shouldInsertHonorAndReadItBack() {
+        String mitgliedsnummer = "N1001";
+        int honorTypeId = 5;
+        LocalDate honorDate = LocalDate.of(2026, 11, 17);
+
+        assertThat(memberHonorRepository
+                .existsByMitgliedsnummerAndHonorTypeId(
+                        mitgliedsnummer,
+                        honorTypeId
+                )).isFalse();
+
+        memberHonorRepository.insertHonor(
+                mitgliedsnummer,
+                honorTypeId,
+                honorDate
+        );
+
+        assertThat(memberHonorRepository
+                .existsByMitgliedsnummerAndHonorTypeId(
+                        mitgliedsnummer,
+                        honorTypeId
+                )).isTrue();
+
+        MemberHonorDto honor = memberHonorRepository
+                .findByMitgliedsnummerAndHonorTypeId(
+                        mitgliedsnummer,
+                        honorTypeId
+                )
+                .orElseThrow();
+
+        assertThat(honor.getHonorId()).isPositive();
+        assertThat(honor.getMitgliedsnummer())
+                .isEqualTo(mitgliedsnummer);
+        assertThat(honor.getHonorTypeId())
+                .isEqualTo(honorTypeId);
+        assertThat(honor.getHonorName())
+                .isNotBlank();
+        assertThat(honor.getHonorDate())
+                .isEqualTo(honorDate);
+    }
+
+    @Test
+    void shouldInsertHonorWithoutDate() {
+        String mitgliedsnummer = "N1001";
+        int honorTypeId = 5;
+
+        memberHonorRepository.insertHonor(
+                mitgliedsnummer,
+                honorTypeId,
+                null
+        );
+
+        MemberHonorDto honor = memberHonorRepository
+                .findByMitgliedsnummerAndHonorTypeId(
+                        mitgliedsnummer,
+                        honorTypeId
+                )
+                .orElseThrow();
+
+        assertThat(honor.getHonorId()).isPositive();
+        assertThat(honor.getHonorTypeId())
+                .isEqualTo(honorTypeId);
+        assertThat(honor.getHonorDate()).isNull();
+    }
+
+    @Test
+    void shouldRejectDuplicateHonorTypeForSameMember() {
+        String mitgliedsnummer = "N1001";
+        int honorTypeId = 5;
+
+        memberHonorRepository.insertHonor(
+                mitgliedsnummer,
+                honorTypeId,
+                LocalDate.of(2020, 5, 10)
+        );
+
+        assertThatThrownBy(() ->
+                memberHonorRepository.insertHonor(
+                        mitgliedsnummer,
+                        honorTypeId,
+                        LocalDate.of(2026, 11, 17)
+                )
+        )
+                .isInstanceOf(DuplicateKeyException.class);
+    }
+
 }

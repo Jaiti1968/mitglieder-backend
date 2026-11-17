@@ -66,6 +66,22 @@ public class LookupRepository {
         );
     }
 
+    public boolean existsHonorTypeById(int honorTypeId) {
+        String sql = """
+            SELECT COUNT(*)
+            FROM tblEhrungen_FT
+            WHERE IDEhrungen = ?
+            """;
+
+        Integer count = jdbcTemplate.queryForObject(
+                sql,
+                Integer.class,
+                honorTypeId
+        );
+
+        return count != null && count > 0;
+    }
+
     public boolean existsMemberStatus(Integer id) {
         String sql = """
                 SELECT COUNT(*)

@@ -50,6 +50,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/members/**")
                         .hasAnyRole("ADMIN", "EDITOR", "VIEWER")
 
+                        .requestMatchers(HttpMethod.POST, "/api/members/*/honors")
+                        .hasAnyRole("ADMIN", "EDITOR")
+
                         .requestMatchers(HttpMethod.POST, "/api/members")
                         .hasAnyRole("ADMIN", "EDITOR")
 

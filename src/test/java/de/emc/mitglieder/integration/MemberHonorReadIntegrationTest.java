@@ -1,4 +1,3 @@
-
 package de.emc.mitglieder.integration;
 
 import org.junit.jupiter.api.Test;
