@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 class MemberHonorServiceTest {
@@ -769,4 +771,83 @@ class MemberHonorServiceTest {
         );
     }
 
+    @Test
+    void shouldDeleteExistingHonor() {
+        String mitgliedsnummer = "N1001";
+        int honorId = 123;
+
+        when(memberRepository.existsByMitgliedsnummer(mitgliedsnummer))
+                .thenReturn(true);
+
+        when(memberHonorRepository.findByHonorIdAndMitgliedsnummer(
+                honorId, mitgliedsnummer
+        )).thenReturn(Optional.of(mock(MemberHonorDto.class)));
+
+        when(memberHonorRepository.deleteHonor(honorId, mitgliedsnummer))
+                .thenReturn(1);
+
+        assertDoesNotThrow(() ->
+                memberHonorService.deleteHonor(mitgliedsnummer, honorId)
+        );
+
+        verify(memberHonorRepository).deleteHonor(honorId, mitgliedsnummer);
+    }
+
+    @Test
+    void shouldRejectDeleteWhenMemberDoesNotExist() {
+        String mitgliedsnummer = "N9999";
+        int honorId = 123;
+
+        when(memberRepository.existsByMitgliedsnummer(mitgliedsnummer))
+                .thenReturn(false);
+
+        assertThrows(NotFoundException.class, () ->
+                memberHonorService.deleteHonor(mitgliedsnummer, honorId)
+        );
+
+        verify(memberHonorRepository, never())
+                .deleteHonor(anyInt(), anyString());
+    }
+
+    @Test
+    void shouldRejectDeleteWhenHonorDoesNotBelongToMember() {
+        String mitgliedsnummer = "N1001";
+        int honorId = 123;
+
+        when(memberRepository.existsByMitgliedsnummer(mitgliedsnummer))
+                .thenReturn(true);
+
+        when(memberHonorRepository.findByHonorIdAndMitgliedsnummer(
+                honorId, mitgliedsnummer
+        )).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () ->
+                memberHonorService.deleteHonor(mitgliedsnummer, honorId)
+        );
+
+        verify(memberHonorRepository, never())
+                .deleteHonor(anyInt(), anyString());
+    }
+
+    @Test
+    void shouldRejectDeleteWhenRepositoryDeletesNoRow() {
+        String mitgliedsnummer = "N1001";
+        int honorId = 123;
+
+        when(memberRepository.existsByMitgliedsnummer(mitgliedsnummer))
+                .thenReturn(true);
+
+        when(memberHonorRepository.findByHonorIdAndMitgliedsnummer(
+                honorId, mitgliedsnummer
+        )).thenReturn(Optional.of(mock(MemberHonorDto.class)));
+
+        when(memberHonorRepository.deleteHonor(honorId, mitgliedsnummer))
+                .thenReturn(0);
+
+        assertThrows(IllegalStateException.class, () ->
+                memberHonorService.deleteHonor(mitgliedsnummer, honorId)
+        );
+
+        verify(memberHonorRepository).deleteHonor(honorId, mitgliedsnummer);
+    }
 }

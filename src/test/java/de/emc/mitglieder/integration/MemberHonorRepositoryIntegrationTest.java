@@ -418,4 +418,76 @@ class MemberHonorRepositoryIntegrationTest {
                 )
         ).isInstanceOf(DuplicateKeyException.class);
     }
+
+    @Test
+    void shouldDeleteHonorAndVerifyItIsGone() {
+        String mitgliedsnummer = "N1001";
+        int honorTypeId = 5;
+
+        memberHonorRepository.insertHonor(
+                mitgliedsnummer,
+                honorTypeId,
+                LocalDate.of(2020, 5, 10)
+        );
+
+        MemberHonorDto existingHonor = memberHonorRepository
+                .findByMitgliedsnummerAndHonorTypeId(
+                        mitgliedsnummer,
+                        honorTypeId
+                )
+                .orElseThrow();
+
+        int honorId = existingHonor.getHonorId();
+
+        int deletedRows = memberHonorRepository.deleteHonor(
+                honorId,
+                mitgliedsnummer
+        );
+
+        assertThat(deletedRows).isEqualTo(1);
+
+        assertThat(memberHonorRepository
+                .findByHonorIdAndMitgliedsnummer(
+                        honorId,
+                        mitgliedsnummer
+                )
+        ).isEmpty();
+    }
+
+    @Test
+    void shouldNotDeleteHonorBelongingToAnotherMember() {
+        String ownerMitgliedsnummer = "N1001";
+        String otherMitgliedsnummer = "N1002";
+        int honorTypeId = 5;
+
+        memberHonorRepository.insertHonor(
+                ownerMitgliedsnummer,
+                honorTypeId,
+                LocalDate.of(2020, 5, 10)
+        );
+
+        MemberHonorDto existingHonor = memberHonorRepository
+                .findByMitgliedsnummerAndHonorTypeId(
+                        ownerMitgliedsnummer,
+                        honorTypeId
+                )
+                .orElseThrow();
+
+        int honorId = existingHonor.getHonorId();
+
+        int deletedRows = memberHonorRepository.deleteHonor(
+                honorId,
+                otherMitgliedsnummer
+        );
+
+        assertThat(deletedRows).isZero();
+
+        assertThat(memberHonorRepository
+                .findByHonorIdAndMitgliedsnummer(
+                        honorId,
+                        ownerMitgliedsnummer
+                )
+        ).isPresent();
+    }
+
 }

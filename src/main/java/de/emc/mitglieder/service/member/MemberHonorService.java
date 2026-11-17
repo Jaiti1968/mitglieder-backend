@@ -154,4 +154,32 @@ public class MemberHonorService {
                 ));
     }
 
+    public void deleteHonor(String mitgliedsnummer, int honorId) {
+
+        if (!memberRepository.existsByMitgliedsnummer(mitgliedsnummer)) {
+            throw new NotFoundException(
+                    "Mitglied mit Nummer " + mitgliedsnummer
+                            + " wurde nicht gefunden."
+            );
+        }
+
+        memberHonorRepository.findByHonorIdAndMitgliedsnummer(
+                honorId,
+                mitgliedsnummer
+        ).orElseThrow(() -> new NotFoundException(
+                "Die Ehrung wurde für dieses Mitglied nicht gefunden."
+        ));
+
+        int deletedRows = memberHonorRepository.deleteHonor(
+                honorId,
+                mitgliedsnummer
+        );
+
+        if (deletedRows != 1) {
+            throw new IllegalStateException(
+                    "Die Ehrung konnte nicht eindeutig gelöscht werden."
+            );
+        }
+    }
+
 }

@@ -182,4 +182,18 @@ public class MemberHonorRepository {
                 mitgliedsnummer
         );
     }
+
+    public int deleteHonor(int honorId, String mitgliedsnummer) {
+        String sql = """
+            DELETE FROM tblEhrungen
+            WHERE IDTabEhrungen = ?
+              AND Mitgliedsnummer = ?
+            """;
+
+        return jdbcTemplate.update(
+                sql,
+                honorId,
+                mitgliedsnummer
+        );
+    }
 }
