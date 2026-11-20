@@ -222,6 +222,22 @@ public class MemberRepository {
         }
     }
 
+    public boolean existsByMitgliedsnummer(String mitgliedsnummer) {
+        String sql = """
+            SELECT COUNT(*)
+            FROM tblMitglieder
+            WHERE Mitgliedsnummer = ?
+            """;
+
+        Integer count = jdbcTemplate.queryForObject(
+                sql,
+                Integer.class,
+                mitgliedsnummer
+        );
+
+        return count != null && count > 0;
+    }
+
     public void updateStammdaten(
             String mitgliedsnummer,
             UpdateStammdatenRequest r

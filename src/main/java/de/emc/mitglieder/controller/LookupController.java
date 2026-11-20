@@ -27,4 +27,9 @@ public class LookupController {
     public List<LookupItemDto> getVoices() {
         return lookupService.getVoices();
     }
+
+    @GetMapping("/honors")
+    public List<LookupItemDto> getHonors() {
+        return lookupService.getHonors();
+    }
 }

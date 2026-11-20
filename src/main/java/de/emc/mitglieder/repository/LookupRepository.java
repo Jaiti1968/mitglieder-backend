@@ -49,6 +49,39 @@ public class LookupRepository {
         );
     }
 
+    public List<LookupItemDto> findHonors() {
+        String sql = """
+            SELECT
+                IDEhrungen,
+                Ehrungen
+            FROM tblEhrungen_FT
+            ORDER BY IDEhrungen
+            """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+                new LookupItemDto(
+                        rs.getInt("IDEhrungen"),
+                        rs.getString("Ehrungen")
+                )
+        );
+    }
+
+    public boolean existsHonorTypeById(int honorTypeId) {
+        String sql = """
+            SELECT COUNT(*)
+            FROM tblEhrungen_FT
+            WHERE IDEhrungen = ?
+            """;
+
+        Integer count = jdbcTemplate.queryForObject(
+                sql,
+                Integer.class,
+                honorTypeId
+        );
+
+        return count != null && count > 0;
+    }
+
     public boolean existsMemberStatus(Integer id) {
         String sql = """
                 SELECT COUNT(*)
